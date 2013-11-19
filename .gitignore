@@ -149,3 +149,8 @@ $RECYCLE.BIN/
 
 # Mac crap
 .DS_Store
+
+/EdmGen
+
+/_CONN.txt
+/Test1
