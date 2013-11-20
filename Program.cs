@@ -27,17 +27,18 @@ using System.Data.EntityClient;
 namespace EdmGen06 {
     class Program {
         static void Main(string[] args) {
-            if (args.Length >= 4 && args[0] == "/ModelGen") {
+            if (args.Length >= 5 && args[0] == "/ModelGen") {
                 new Program().ModelGen(
                     args[1],
                     args[2],
                     args[3],
-                    (args.Length > 4) ? new Version(args[4]) : new Version("3.0")
+                    args[4],
+                    (args.Length > 5) ? new Version(args[5]) : new Version("3.0")
                     );
                 return;
             }
             Console.Error.WriteLine(APP);
-            Console.Error.WriteLine(" /ModelGen <connectionString> <providerName> <modelName> <ver>");
+            Console.Error.WriteLine(" /ModelGen <connectionString> <providerName> <modelName> <targetSchema> <ver>");
             Environment.ExitCode = 1;
         }
 
@@ -91,7 +92,7 @@ namespace EdmGen06 {
 
         TraceSource trace = new TraceSource(APP, SourceLevels.All);
 
-        void ModelGen(String connectionString, String providerName, String modelName, Version yver) {
+        void ModelGen(String connectionString, String providerName, String modelName, String targetSchema, Version yver) {
             String baseDir = Environment.CurrentDirectory;
 
             String fpssdl3 = Path.Combine(baseDir, modelName + ".ssdl");
@@ -193,6 +194,7 @@ namespace EdmGen06 {
 
                 nut.providerManifest = providerManifest;
                 nut.modelName = modelName;
+                nut.targetSchema = targetSchema;
 
                 var entityConnectionString = ""
                     + "Provider=" + providerName + ";"
@@ -255,6 +257,8 @@ namespace EdmGen06 {
                     foreach (var dbt in vecTableOrView) {
                         trace.TraceEvent(TraceEventType.Information, 101, "{2}: {0}.{1}", dbt.SchemaName, dbt.Name, (dbt is Table) ? "Table" : "View");
 
+                        if (dbt.SchemaName != targetSchema) continue;
+
                         XElement ssdlEntitySet = new XElement(xSSDL + "EntitySet"
                             , new XAttribute("Name", nut.SsdlEntitySet(dbt))
                             , new XAttribute("EntityType", nut.SsdlEntityTypeRef(dbt))
@@ -310,10 +314,12 @@ namespace EdmGen06 {
                                 );
                             ssdlEntityType.Add(ssdlProperty);
 
+                            bool deleteMe = nut.CsdlPropType(dbc) == null;
+
                             String csdlName;
                             XElement csdlProperty = new XElement(xCSDL + "Property"
                                 , new XAttribute("Name", csdlName = nut.CsdlProp(dbc))
-                                , new XAttribute("Type", nut.CsdlPropType(dbc))
+                                , new XAttribute("Type", nut.CsdlPropType(dbc) ?? "?")
                                 );
                             csdlEntityType.Add(csdlProperty);
 
@@ -351,6 +357,16 @@ namespace EdmGen06 {
                                     ));
                                 csdlProperty.SetAttributeValue(xAnno + "StoreGeneratedPattern", "Identity");
                             }
+
+                            if (deleteMe) {
+                                ssdlProperty.AddAfterSelf(new XComment(String.Format("Property {0} removed. Unknown type.", ssdlProperty.Attribute("Name"))));
+                                csdlProperty.AddAfterSelf(new XComment(String.Format("Property {0} removed. Unknown type.", csdlProperty.Attribute("Name"))));
+                                mslScalarProperty.AddAfterSelf(new XComment(String.Format("ScalarProperty {0} removed. Unknown type.", mslScalarProperty.Attribute("Name"))));
+
+                                ssdlProperty.Remove();
+                                csdlProperty.Remove();
+                                mslScalarProperty.Remove();
+                            }
                         }
                         if (!hasKey) {
                             ssdlEntitySet.AddAfterSelf(new XComment(String.Format("EntitySet {0} removed. No identical keys found.", ssdlEntitySet.Attribute("Name"))));
@@ -373,6 +389,8 @@ namespace EdmGen06 {
 
                     foreach (var dbco in Context.TableConstraints.OfType<ForeignKeyConstraint>()) {
                         trace.TraceEvent(TraceEventType.Information, 101, "Constraint: {0}", dbco.Name);
+
+                        if (dbco.Parent.SchemaName != targetSchema) continue;
 
                         // ssdl
                         var ssdlAssociationSet = new XElement(xSSDL + "AssociationSet"
@@ -418,6 +436,8 @@ namespace EdmGen06 {
                     if (xSSDL != NS.SSDLv1)
                         foreach (var dbr in Context.Functions.Cast<Routine>().Union(Context.Procedures)) {
                             trace.TraceEvent(TraceEventType.Information, 101, "{2}: {0}.{1}", dbr.SchemaName, dbr.Name, (dbr is Function) ? "Function" : "Procedure");
+
+                            if (dbr.SchemaName != targetSchema) continue;
 
                             // http://msdn.microsoft.com/ja-jp/library/bb738614(v=vs.90).aspx
                             var ssdlFunction = new XElement(xSSDL + "Function"
@@ -558,9 +578,10 @@ namespace EdmGen06 {
         class Nameut {
             public DbProviderManifest providerManifest { get; set; }
             public String modelName { get; set; }
+            public String targetSchema { get; set; }
 
-            public String SsdlNs() { return String.Format("{0}Model.Store", modelName); }
-            public String SsdlContainer() { return String.Format("{0}ModelStoreContainer", modelName); }
+            public String SsdlNs() { return String.Format("{0}", targetSchema); }
+            public String SsdlContainer() { return String.Format("{0}StoreContainer", modelName); }
             public String SsdlEntitySet(TableOrView dbt) { return dbt.Name; }
             public String SsdlEntityType(TableOrView dbt) { return String.Format("{0}", dbt.Name); }
             public String SsdlEntityTypeRef(TableOrView dbt) { return String.Format("{0}.{1}", SsdlNs(), SsdlEntityType(dbt)); }
@@ -570,7 +591,7 @@ namespace EdmGen06 {
             public String SsdlPropType(Column dbc) { return SsdlPropType(dbc.ColumnType); }
             public String SsdlPropType(TypeSpecification ts) { return ts.TypeName; }
 
-            public String CsdlNs() { return String.Format("{0}Model", modelName); }
+            public String CsdlNs() { return String.Format("{0}", modelName); }
 
             public String CsdlContainer() { return String.Format("{0}Entities", modelName); }
             public String CsdlEntitySet(TableOrView dbt) { return TSimpleIdentifier(dbt.Name); }
@@ -600,7 +621,7 @@ namespace EdmGen06 {
                     }
                 }
                 // Unknown type
-                return PrimitiveTypeKind.String.ToString();
+                return null;
             }
 
             public String SsdlAssociationSet(ForeignKeyConstraint dbco) {
