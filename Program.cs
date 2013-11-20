@@ -350,6 +350,7 @@ namespace EdmGen06 {
                                 ssdlKey.Add(new XElement(xSSDL + "PropertyRef"
                                     , new XAttribute("Name", ssdlName)
                                     ));
+                                if (isIdGen) ssdlProperty.SetAttributeValue("StoreGeneratedPattern", "Identity");
                                 if (isIdGen) ssdlProperty.SetAttributeValue(xAnno + "StoreGeneratedPattern", "Identity");
                             }
                             if (isId) {
