@@ -79,5 +79,14 @@ namespace EdmGen06.Properties {
                 return ((byte[])(obj));
             }
         }
+        
+        /// <summary>
+        ///    に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string Usage {
+            get {
+                return ResourceManager.GetString("Usage", resourceCulture);
+            }
+        }
     }
 }

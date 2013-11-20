@@ -37,8 +37,7 @@ namespace EdmGen06 {
                     );
                 return;
             }
-            Console.Error.WriteLine(APP);
-            Console.Error.WriteLine(" /ModelGen <connectionString> <providerName> <modelName> <targetSchema> <ver>");
+            Console.Error.WriteLine(Resources.Usage);
             Environment.ExitCode = 1;
         }
 
@@ -99,6 +98,7 @@ namespace EdmGen06 {
             String fpcsdl3 = Path.Combine(baseDir, modelName + ".csdl");
             String fpmsl3 = Path.Combine(baseDir, modelName + ".msl");
             String fpedmx3 = Path.Combine(baseDir, modelName + ".edmx");
+            String fpconfig = Path.Combine(baseDir, modelName + ".App.config");
 
             if (false) { }
             else if (yver == new Version(1, 0)) { xEDMX = "{" + NS.EDMXv1 + "}"; xSSDL = "{" + NS.SSDLv1 + "}"; xCSDL = "{" + NS.CSDLv1 + "}"; xMSL = "{" + NS.MSLv1 + "}"; trace.TraceEvent(TraceEventType.Information, 101, "ModelGen v1"); }
@@ -305,7 +305,8 @@ namespace EdmGen06 {
                         foreach (var dbc in dbt.Columns) {
                             trace.TraceEvent(TraceEventType.Information, 101, " TableColumn: {0}", dbc.Name);
 
-                            bool isId = dbc.IsIdentity || dbc.Constraints.OfType<PrimaryKeyConstraint>().Any() || (hasId ? false : !dbc.IsNullable);
+                            bool isIdGen = dbc.IsIdentity;
+                            bool isId = isIdGen || dbc.Constraints.OfType<PrimaryKeyConstraint>().Any() || (hasId ? false : !dbc.IsNullable);
 
                             String ssdlName;
                             XElement ssdlProperty = new XElement(xSSDL + "Property"
@@ -334,8 +335,11 @@ namespace EdmGen06 {
                                 csdlProperty.SetAttributeValue("Nullable", "false");
                             }
                             if (dbc.ColumnType.MaxLength.HasValue) {
-                                ssdlProperty.SetAttributeValue("MaxLength", dbc.ColumnType.MaxLength.Value + "");
-                                csdlProperty.SetAttributeValue("MaxLength", dbc.ColumnType.MaxLength.Value + "");
+                                int maxLen = dbc.ColumnType.MaxLength.Value;
+                                if (maxLen != -1 && maxLen != 0x3FFFFFFF && maxLen != 0x7FFFFFFF) {
+                                    ssdlProperty.SetAttributeValue("MaxLength", dbc.ColumnType.MaxLength.Value + "");
+                                    csdlProperty.SetAttributeValue("MaxLength", dbc.ColumnType.MaxLength.Value + "");
+                                }
                             }
                             if (isId) {
                                 hasKey = true;
@@ -346,6 +350,7 @@ namespace EdmGen06 {
                                 ssdlKey.Add(new XElement(xSSDL + "PropertyRef"
                                     , new XAttribute("Name", ssdlName)
                                     ));
+                                if (isIdGen) ssdlProperty.SetAttributeValue(xAnno + "StoreGeneratedPattern", "Identity");
                             }
                             if (isId) {
                                 if (csdlKey == null) {
@@ -355,7 +360,7 @@ namespace EdmGen06 {
                                 csdlKey.Add(new XElement(xCSDL + "PropertyRef"
                                     , new XAttribute("Name", csdlName)
                                     ));
-                                csdlProperty.SetAttributeValue(xAnno + "StoreGeneratedPattern", "Identity");
+                                if (isIdGen) csdlProperty.SetAttributeValue(xAnno + "StoreGeneratedPattern", "Identity");
                             }
 
                             if (deleteMe) {
@@ -488,6 +493,7 @@ namespace EdmGen06 {
                                 // csdl
                                 var csdlParameter = new XElement(xCSDL + "Parameter"
                                     , new XAttribute("Name", nut.CsdlParameterName(dbfp))
+                                    , new XAttribute("Mode", nut.CsdlParameterMode(dbfp))
                                     , new XAttribute("Type", nut.CsdlPropType(dbfp.ParameterType))
                                     );
                                 csdlFunctionImport.Add(csdlParameter);
@@ -500,6 +506,26 @@ namespace EdmGen06 {
                     csdlSchema.Save(fpcsdl3);
                     mslMapping.Save(fpmsl3);
                     ssdlSchema.Save(fpssdl3);
+                }
+
+                {
+                    XDocument xAppconfig = new XDocument(
+                        new XElement("configuration"
+                            , new XElement("connectionStrings"
+                                , new XComment("for EF4.x (NET4.0/NET4.5)")
+                                , new XElement("add"
+                                    , new XAttribute("name", String.Format("{0}Entities", modelName))
+                                    , new XAttribute("connectionString", String.Format("metadata={0}.csdl|{0}.ssdl|{0}.msl;provider={1};provider connection string=\"{2}\""
+                                        , modelName
+                                        , providerName
+                                        , connectionString // UUt.UrlEncode("\"" + connectionString + "\"")
+                                        ))
+                                    , new XAttribute("providerName", "System.Data.EntityClient")
+                                    )
+                                )
+                            )
+                        );
+                    xAppconfig.Save(fpconfig);
                 }
 
                 mEdmx.Save(fpedmx3);
@@ -682,6 +708,25 @@ namespace EdmGen06 {
 
             public String CsdlPropCollType(TypeSpecification ts) {
                 return String.Format("Collection({0})", CsdlPropType(ts));
+            }
+
+            public String CsdlParameterMode(Parameter dbfp) {
+                if (false) { }
+                else if (dbfp.Mode == "IN") return "In";
+                else if (dbfp.Mode == "OUT") return "Out";
+                else if (dbfp.Mode == "INOUT") return "InOut";
+                return "";
+            }
+        }
+
+        class UUt {
+            public static string UrlEncode(string p) {
+                return (p ?? String.Empty)
+                    .Replace("&", "&amp;")
+                    .Replace("<", "&lt;")
+                    .Replace(">", "&gt;")
+                    .Replace("\"", "&quot;")
+                    ;
             }
         }
     }
