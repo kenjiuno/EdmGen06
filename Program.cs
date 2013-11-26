@@ -22,6 +22,7 @@ using System.Data.Metadata.Edm;
 using System.Data.Objects;
 using System.Data.Objects.DataClasses;
 using System.Data.EntityClient;
+using System.Data;
 #endif
 
 namespace EdmGen06 {
@@ -34,6 +35,15 @@ namespace EdmGen06 {
                     args[3],
                     args[4],
                     (args.Length > 5) ? new Version(args[5]) : new Version("3.0")
+                    );
+                return;
+            }
+            else if (args.Length >= 5 && args[0] == "/DataSet") {
+                new Program().DataSet(
+                    args[1],
+                    args[2],
+                    args[3],
+                    args[4]
                     );
                 return;
             }
@@ -728,6 +738,600 @@ namespace EdmGen06 {
                     .Replace(">", "&gt;")
                     .Replace("\"", "&quot;")
                     ;
+            }
+        }
+
+        XNamespace xxs = "http://www.w3.org/2001/XMLSchema";
+        XNamespace xmsdata = "urn:schemas-microsoft-com:xml-msdata";
+        XNamespace xmsprop = "urn:schemas-microsoft-com:xml-msprop";
+
+        void DataSet(String connectionString, String providerName, String modelName, String targetSchema) {
+            String baseDir = Environment.CurrentDirectory;
+
+            trace.TraceEvent(TraceEventType.Information, 101, "Getting System.Data.Common.DbProviderFactory from '{0}'", providerName);
+            var fac = System.Data.Common.DbProviderFactories.GetFactory(providerName);
+            if (fac == null) throw new ApplicationException();
+            trace.TraceEvent(TraceEventType.Information, 101, fac.GetType().AssemblyQualifiedName);
+            trace.TraceEvent(TraceEventType.Information, 101, "Ok");
+
+
+            using (var db = fac.CreateConnection()) {
+                trace.TraceEvent(TraceEventType.Information, 101, "Connecting");
+                db.ConnectionString = connectionString;
+                db.Open();
+                trace.TraceEvent(TraceEventType.Information, 101, "Connected");
+
+                trace.TraceEvent(TraceEventType.Information, 101, "Getting System.Data.Entity.Core.Common.DbProviderServices from '{0}'", providerName);
+                var providerServices = ((IServiceProvider)fac).GetService(typeof(DbProviderServices)) as DbProviderServices;
+                if (providerServices == null) providerServices = DbProviderServices.GetProviderServices(db);
+                trace.TraceEvent(TraceEventType.Information, 101, providerServices.GetType().AssemblyQualifiedName);
+                trace.TraceEvent(TraceEventType.Information, 101, "Ok");
+
+                trace.TraceEvent(TraceEventType.Information, 101, "Get ProviderManifestToken");
+                var providerManifestToken = providerServices.GetProviderManifestToken(db);
+                trace.TraceEvent(TraceEventType.Information, 101, "Get ProviderManifest");
+                var providerManifest = providerServices.GetProviderManifest(providerManifestToken) as DbProviderManifest;
+
+                trace.TraceEvent(TraceEventType.Information, 101, "Get StoreSchemaDefinition");
+                var storeSchemaDefinition = providerManifest.GetInformation("StoreSchemaDefinition") as XmlReader;
+                trace.TraceEvent(TraceEventType.Information, 101, "Get StoreSchemaMapping");
+                var storeSchemaMapping = providerManifest.GetInformation("StoreSchemaMapping") as XmlReader;
+
+                trace.TraceEvent(TraceEventType.Information, 101, "Write temporary ProviderManifest ssdl");
+                XDocument tSsdl;
+                String fpssdl = Path.Combine(baseDir, "__" + providerName + ".ssdl");
+                String fpssdl2 = Path.Combine(baseDir, "__" + providerName + ".ssdl.xml");
+                {
+                    tSsdl = XDocument.Load(storeSchemaDefinition);
+                    tSsdl.Save(fpssdl);
+                    tSsdl.Save(fpssdl2);
+                }
+
+                trace.TraceEvent(TraceEventType.Information, 101, "Write temporary ProviderManifest msl");
+                XDocument tMsl;
+                String fpmsl = Path.Combine(baseDir, "__" + providerName + ".msl");
+                String fpmsl2 = Path.Combine(baseDir, "__" + providerName + ".msl.xml");
+                {
+                    tMsl = XDocument.Load(storeSchemaMapping);
+                    tMsl.Save(fpmsl);
+                    tMsl.Save(fpmsl2);
+                }
+
+                trace.TraceEvent(TraceEventType.Information, 101, "Checking ProviderManifest version.");
+                XmlReader xrCsdl = null;
+                if (false) { }
+                else if (tSsdl.Element("{" + NS.SSDLv1 + "}" + "Schema") != null && tMsl.Element("{" + NS.MSLv1 + "}" + "Mapping") != null) {
+                    pCSDL = "{" + NS.CSDLv1 + "}";
+                    pMSL = "{" + NS.MSLv1 + "}";
+                    pSSDL = "{" + NS.SSDLv1 + "}";
+#if ENTITIES6
+                    xrCsdl = DbProviderServices.GetConceptualSchemaDefinition(DbProviderManifest.ConceptualSchemaDefinition);
+#else
+                    xrCsdl = XmlReader.Create(new MemoryStream(Resources.ConceptualSchemaDefinition));
+#endif
+                    trace.TraceEvent(TraceEventType.Information, 101, "ProviderManifest v1");
+                }
+                else if (tSsdl.Element("{" + NS.SSDLv3 + "}" + "Schema") != null && tMsl.Element("{" + NS.MSLv3 + "}" + "Mapping") != null) {
+                    pCSDL = "{" + NS.CSDLv3 + "}";
+                    pMSL = "{" + NS.MSLv3 + "}";
+                    pSSDL = "{" + NS.SSDLv3 + "}";
+#if ENTITIES6
+                    xrCsdl = DbProviderServices.GetConceptualSchemaDefinition(DbProviderManifest.ConceptualSchemaDefinitionVersion3);
+#else
+                    xrCsdl = XmlReader.Create(new MemoryStream(Resources.ConceptualSchemaDefinitionVersion3));
+#endif
+                    trace.TraceEvent(TraceEventType.Information, 101, "ProviderManifest v3");
+                }
+                else {
+                    trace.TraceEvent(TraceEventType.Error, 101, "ProviderManifest version unknown");
+                    throw new ApplicationException("ProviderManifest version unknown");
+                }
+
+                trace.TraceEvent(TraceEventType.Information, 101, "Write temporary ProviderManifest csdl");
+                String fpcsdl = Path.Combine(baseDir, "__" + providerName + ".csdl");
+                XDocument tCsdl;
+                {
+                    tCsdl = XDocument.Load(xrCsdl);
+                    tCsdl.Save(fpcsdl);
+                }
+
+                var entityConnectionString = ""
+                    + "Provider=" + providerName + ";"
+                    + "Provider Connection String=\"" + db.ConnectionString + "\";"
+                    + "Metadata=" + fpcsdl + "|" + fpssdl + "|" + fpmsl + ";"
+                    ;
+
+                trace.TraceEvent(TraceEventType.Information, 101, "Getting SchemaInformation");
+                using (var Context = new SchemaInformation(entityConnectionString)) {
+                    trace.TraceEvent(TraceEventType.Information, 101, "Ok");
+
+                    DataTable dtMetaDataCollections = db.GetSchema("MetaDataCollections");
+                    DataTable dtDataSourceInformation = db.GetSchema("DataSourceInformation");
+                    //DataTable dtDataTypes = db.GetSchema("DataTypes");
+                    DataTable dtReservedWords = db.GetSchema("ReservedWords");
+
+                    XDocument xsd = new XDocument();
+
+                    XNamespace nsMSTNS = "http://tempuri.org/DataSet1.xsd";
+                    XNamespace nsDS = "urn:schemas-microsoft-com:xml-msdatasource";
+
+                    String dbn = db.Database;
+                    String dataSet1 = modelName;
+
+                    dut.providerManifest = providerManifest;
+                    dut.modelName = modelName;
+                    dut.providerName = providerName;
+                    dut.targetSchema = targetSchema;
+                    foreach (DataRow dr in dtDataSourceInformation.Rows) {
+                        dut.CompositeIdentifierSeparatorPattern = (String)dr["CompositeIdentifierSeparatorPattern"];
+                        dut.IdentifierPattern = (String)dr["IdentifierPattern"];
+                        dut.ParameterMarkerFormat = (String)dr["ParameterMarkerFormat"];
+                        dut.ParameterMarkerPattern = (String)dr["ParameterMarkerPattern"];
+                        dut.ParameterNamePattern = (String)dr["ParameterNamePattern"];
+                        dut.QuotedIdentifierPattern = (String)dr["QuotedIdentifierPattern"];
+                        dut.StringLiteralPattern = (String)dr["StringLiteralPattern"];
+                        dut.IdentifierCase = (IdentifierCase)dr["IdentifierCase"];
+                        dut.ParameterNameMaxLength = (int)dr["ParameterNameMaxLength"];
+                    }
+
+                    // http://d.hatena.ne.jp/gsf_zero1/20121219/p1
+
+                    XElement xSchema;
+                    xsd.Add(xSchema = new XElement(xxs + "schema"
+                        , new XAttribute(XNamespace.Xmlns + "xs", xxs)
+                        , new XAttribute(XNamespace.Xmlns + "mstns", nsMSTNS)
+                        , new XAttribute(XNamespace.Xmlns + "msdata", xmsdata)
+                        , new XAttribute(XNamespace.Xmlns + "msprop", xmsprop)
+                        , new XAttribute("id", dataSet1)
+                        , new XAttribute("targetNamespace", nsMSTNS)
+                        , new XAttribute("attributeFormDefault", "qualified")
+                        , new XAttribute("elementFormDefault", "qualified")
+                        ));
+
+                    {
+                        XElement xAnn, xTables;
+                        xSchema.Add(xAnn = new XElement(xxs + "annotation"
+                            , new XElement(xxs + "appinfo"
+                                , new XAttribute("source", nsDS)
+                                , new XElement(nsDS + "DataSource"
+                                    , new XAttribute("DefaultConnectionIndex", "0")
+                                    , new XAttribute("FunctionsComponentName", "QueriesTableAdapter")
+                                    , new XAttribute("Modifier", "AutoLayout, AnsiClass, Class, Public")
+                                    , new XAttribute("SchemaSerializationMode", "IncludeSchema")
+                                    , new XElement(nsDS + "Connections"
+                                        , new XElement(nsDS + "Connection"
+                                            , new XAttribute("AppSettingsObjectName", "Settings")
+                                            , new XAttribute("AppSettingsPropertyName", dbn + "ConnectionString")
+                                            , new XAttribute("ConnectionStringObject", "")
+                                            , new XAttribute("IsAppSettingsProperty", "true")
+                                            , new XAttribute("Modifier", "Assembly")
+                                            , new XAttribute("Name", dbn + "ConnectionString (Settings)")
+                                            , new XAttribute("ParameterPrefix", "@")
+                                            , new XAttribute("Provider", providerName)
+                                            )
+                                        )
+                                    , xTables = new XElement(nsDS + "Tables"
+
+                                        )
+                                    )
+                                )
+                            )
+                        );
+
+                        XElement xchoice, xelt;
+                        xSchema.Add(xelt = new XElement(xxs + "element"
+                            , new XAttribute("name", dataSet1)
+                            , new XAttribute(xmsdata + "IsDataSet", "true")
+                            , new XAttribute(xmsdata + "UseCurrentLocale", "true")
+                            , new XAttribute(xmsdata + "EnableTableAdapterManager", "true")
+                            , new XAttribute(xmsprop + "Generator_DataSetName", dut.Generator_DataSetName(dbn))
+                            , new XAttribute(xmsprop + "Generator_UserDSName", dut.Generator_UserDSName(dbn))
+                            , new XElement(xxs + "complexType"
+                                , xchoice = new XElement(xxs + "choice"
+                                    , new XAttribute("minOccurs", "0")
+                                    , new XAttribute("maxOccurs", "unbounded")
+                                    )
+                                )
+                            )
+                        );
+
+                        foreach (var Table in Context.Tables) {
+                            DbDataAdapter da = fac.CreateDataAdapter();
+                            DbCommandBuilder cb = fac.CreateCommandBuilder();
+                            da.SelectCommand = db.CreateCommand();
+                            da.SelectCommand.CommandText = String.Format("SELECT " + String.Join(", ", Table.Columns.Select(p => dut.SColumn(p, cb)).ToArray()) + " FROM " + dut.STable(Table, cb));
+                            cb.DataAdapter = da;
+                            try {
+                                da.DeleteCommand = cb.GetDeleteCommand();
+                            }
+                            catch (InvalidOperationException) { }
+                            try {
+                                da.InsertCommand = cb.GetInsertCommand();
+                            }
+                            catch (InvalidOperationException) { }
+                            try {
+                                da.UpdateCommand = cb.GetUpdateCommand();
+                            }
+                            catch (InvalidOperationException) { }
+
+                            XElement xDbSource;
+                            XElement xTableAdapter, xMappings;
+                            xTables.Add(xTableAdapter = new XElement(nsDS + "TableAdapter"
+                                , new XAttribute("BaseClass", "System.ComponentModel.Component")
+                                , new XAttribute("DataAccessorModifier", "AutoLayout, AnsiClass, Class, Public")
+                                , new XAttribute("DataAccessorName", dut.DataAccessorName(Table))
+                                , new XAttribute("GeneratorDataComponentClassName", dut.GeneratorDataComponentClassName(Table))
+                                , new XAttribute("Name", Table.Name)
+                                , new XAttribute("UserDataComponentName", dut.UserDataComponentName(Table))
+                                , new XElement(nsDS + "MainSource"
+                                    , xDbSource = new XElement(nsDS + "DbSource"
+                                        , new XAttribute("ConnectionRef", dbn + "ConnectionString (Settings)")
+                                        , new XAttribute("DbObjectName", dut.DbObjectName(Table, cb))
+                                        , new XAttribute("DbObjectType", "Table")
+                                        , new XAttribute("FillMethodName", "Fill")
+                                        , new XAttribute("GenerateMethods", "Both")
+                                        , new XAttribute("GenerateShortCommands", "true")
+                                        , new XAttribute("GeneratorGetMethodName", "GetData")
+                                        , new XAttribute("GeneratorSourceName", "Fill")
+                                        , new XAttribute("GetMethodModifier", "Public")
+                                        , new XAttribute("GetMethodName", "GetData")
+                                        , new XAttribute("QueryType", "Rowset")
+                                        , new XAttribute("ScalarCallRetval", typeof(object).AssemblyQualifiedName)
+                                        , new XAttribute("UseOptimisticConcurrency", "true")
+                                        , new XAttribute("UserGetMethodName", "GetData")
+                                        , new XAttribute("UserSourceName", "Fill")
+                                        )
+                                    )
+                                , xMappings = new XElement(nsDS + "Mappings"
+                                    )
+                                , new XElement(nsDS + "Sources"
+                                    )
+                                )
+                            );
+                            if (da.DeleteCommand != null) xDbSource.Add(
+                                new XElement(nsDS + "DeleteCommand", GetCommandEl(Table, da.DeleteCommand, cb, nsDS))
+                                );
+                            if (da.InsertCommand != null) xDbSource.Add(
+                                new XElement(nsDS + "InsertCommand", GetCommandEl(Table, da.InsertCommand, cb, nsDS))
+                                );
+                            if (da.SelectCommand != null) xDbSource.Add(
+                                new XElement(nsDS + "SelectCommand", GetCommandEl(Table, da.SelectCommand, cb, nsDS))
+                                );
+                            if (da.UpdateCommand != null) xDbSource.Add(
+                                new XElement(nsDS + "UpdateCommand", GetCommandEl(Table, da.UpdateCommand, cb, nsDS))
+                                );
+
+                            XElement xsequence;
+                            xchoice.Add(new XElement(xxs + "element"
+                                , new XAttribute("name", dut.xsname(Table))
+                                , new XAttribute(xmsprop + "Generator_TableClassName", dut.Generator_TableClassName(Table))
+                                , new XAttribute(xmsprop + "Generator_TableVarName", dut.Generator_TableVarName(Table))
+                                , new XAttribute(xmsprop + "Generator_TablePropName", dut.Generator_TablePropName(Table))
+                                , new XAttribute(xmsprop + "Generator_RowDeletingName", dut.Generator_RowDeletingName(Table))
+                                , new XAttribute(xmsprop + "Generator_RowChangingName", dut.Generator_RowChangingName(Table))
+                                , new XAttribute(xmsprop + "Generator_RowEvHandlerName", dut.Generator_RowEvHandlerName(Table))
+                                , new XAttribute(xmsprop + "Generator_RowDeletedName", dut.Generator_RowDeletedName(Table))
+                                , new XAttribute(xmsprop + "Generator_UserTableName", dut.Generator_UserTableName(Table))
+                                , new XAttribute(xmsprop + "Generator_RowChangedName", dut.Generator_RowChangedName(Table))
+                                , new XAttribute(xmsprop + "Generator_RowEvArgName", dut.Generator_RowEvArgName(Table))
+                                , new XAttribute(xmsprop + "Generator_RowClassName", dut.Generator_RowClassName(Table))
+                                , new XElement(xxs + "complexType"
+                                    , xsequence = new XElement(xxs + "sequence"
+                                        )
+                                    )
+                                ));
+
+                            foreach (var dbc in Table.Columns) {
+                                xMappings.Add(new XElement(nsDS + "Mapping"
+                                    , new XAttribute("SourceColumn", dbc.Name)
+                                    , new XAttribute("DataSetColumn", dut.CColumn(dbc.Name))
+                                    ));
+
+                                XElement xce;
+                                xsequence.Add(xce = new XElement(xxs + "element"
+                                    , new XAttribute("name", dut.xsname(dbc))
+                                    ));
+                                if (dbc.IsIdentity) {
+                                    xce.SetAttributeValue(xmsdata + "ReadOnly", "true");
+                                    xce.SetAttributeValue(xmsdata + "AutoIncrement", "true");
+                                    xce.SetAttributeValue(xmsdata + "AutoIncrementSeed", "-1");
+                                    xce.SetAttributeValue(xmsdata + "AutoIncrementStep", "-1");
+                                }
+
+                                xce.SetAttributeValue(xmsprop + "Generator_ColumnVarNameInTable", dut.Generator_ColumnVarNameInTable(dbc));
+                                xce.SetAttributeValue(xmsprop + "Generator_ColumnPropNameInRow", dut.Generator_ColumnPropNameInRow(dbc));
+                                xce.SetAttributeValue(xmsprop + "Generator_ColumnPropNameInTable", dut.Generator_ColumnPropNameInTable(dbc));
+                                xce.SetAttributeValue(xmsprop + "Generator_UserColumnName", dut.Generator_UserColumnName(dbc));
+                                xce.SetAttributeValue("type", dut.xstype(dbc));
+
+                                if (dbc.IsNullable) {
+                                    xce.SetAttributeValue("minOccurs", "0");
+                                }
+
+                                int? MaxLen = dbc.ColumnType.MaxLength;
+                                if (MaxLen.HasValue) {
+                                    xce.Add(new XElement(xxs + "simpleType"
+                                        , new XElement(xxs + "restriction"
+                                            , new XAttribute("base", dut.xstype(dbc))
+                                            , new XElement(xxs + "maxLength"
+                                                , new XAttribute("value", MaxLen.Value + "")
+                                                )
+                                            )
+                                        ));
+                                    xce.Attribute("type").Remove();
+                                }
+                            }
+                        }
+
+                        foreach (var Tcc in Context.TableConstraints.OfType<TableOrViewColumnConstraint>()) {
+                            XElement xunique;
+                            xelt.Add(xunique = new XElement(xxs + "unique"
+                                , new XAttribute("name", dut.xsname(Tcc))
+                                , new XElement(xxs + "selector"
+                                    , new XAttribute("xpath", ".//mstns:" + dut.xsname(Tcc.Parent))
+                                    )
+                                ));
+                            foreach (var tcol in Tcc.Columns) {
+                                xunique.Add(new XElement(xxs + "field"
+                                    , new XAttribute("xpath", "mstns:" + dut.xsname(tcol))
+                                    )
+                                );
+                            }
+                            var pk = Tcc as PrimaryKeyConstraint;
+                            if (pk != null) {
+                                xunique.SetAttributeValue(xmsdata + "PrimaryKey", "true");
+                            }
+                        }
+
+                        XElement xrel;
+                        xSchema.Add(new XElement(xxs + "annotation"
+                            , xrel = new XElement(xxs + "appinfo")
+                            ));
+                        foreach (var Tfk in Context.TableForeignKeys) {
+                            xrel.Add(new XElement(xmsdata + "Relationship"
+                                , new XAttribute("name", dut.xsname(Tfk.Constraint))
+                                , new XAttribute(xmsdata + "parent", dut.xsname(Tfk.ToColumn.Parent))
+                                , new XAttribute(xmsdata + "child", dut.xsname(Tfk.FromColumn.Parent))
+                                , new XAttribute(xmsdata + "parentkey", dut.xsname(Tfk.ToColumn))
+                                , new XAttribute(xmsdata + "childkey", dut.xsname(Tfk.FromColumn))
+                                , new XAttribute(xmsprop + "Generator_UserChildTable", dut.Generator_UserChildTable(Tfk.FromColumn.Parent))
+                                , new XAttribute(xmsprop + "Generator_ChildPropName", dut.Generator_ChildPropName(Tfk.FromColumn))
+                                , new XAttribute(xmsprop + "Generator_UserRelationName", dut.Generator_UserRelationName(Tfk))
+                                , new XAttribute(xmsprop + "Generator_RelationVarName", dut.Generator_RelationVarName(Tfk))
+                                , new XAttribute(xmsprop + "Generator_UserParentTable", dut.Generator_UserParentTable(Tfk.ToColumn.Parent))
+                                , new XAttribute(xmsprop + "Generator_ParentPropName", dut.Generator_ParentPropName(Tfk.ToColumn))
+                                ));
+                        }
+                    }
+
+                    String fpxsd = Path.Combine(baseDir, modelName + ".xsd");
+
+                    xsd.Save(fpxsd);
+                }
+            }
+        }
+
+        private XElement GetCommandEl(Table Table, DbCommand dbco, DbCommandBuilder cb, XNamespace nsDS) {
+            XElement xParameters = new XElement(nsDS + "Parameters");
+
+            foreach (DbParameter dbp in dbco.Parameters) {
+                bool AllowDbNull = true;
+                Column dbc = Table.Columns.Where(p => p.Name == dbp.SourceColumn).FirstOrDefault();
+                if (dbc != null) {
+                    AllowDbNull = dbc.IsNullable;
+                }
+                xParameters.Add(new XElement(nsDS + "Parameter"
+                    , new XAttribute("AllowDbNull", AllowDbNull ? "true" : "false")
+                    , new XAttribute("AutogeneratedName", "")
+                    , new XAttribute("DataSourceName", "")
+                    , new XAttribute("DbType", dbp.DbType + "")
+                    , new XAttribute("Direction", dbp.Direction + "")
+                    , new XAttribute("ParameterName", dbp.ParameterName)
+                    , new XAttribute("Precision", dut.Precision(dbc))
+                    , new XAttribute("ProviderType", dut.ProviderType(dbp, dbc))
+                    , new XAttribute("Scale", dut.Scale(dbc))
+                    , new XAttribute("Size", dut.Size(dbc))
+                    , new XAttribute("SourceColumn", dbp.SourceColumn)
+                    , new XAttribute("SourceColumnNullMapping", dbp.SourceColumnNullMapping ? "true" : "false")
+                    , new XAttribute("SourceVersion", dbp.SourceVersion)
+                    )
+                );
+            }
+
+            return new XElement(nsDS + "DbCommand"
+                , new XAttribute("CommandType", "Text")
+                , new XAttribute("ModifiedByUser", "false")
+                , new XElement(nsDS + "CommandText"
+                    , new XText(dbco.CommandText)
+                    )
+                , xParameters
+                );
+        }
+
+        DUt dut = new DUt();
+
+        class DUt {
+            public DbProviderManifest providerManifest { get; set; }
+
+            public String providerName { get; set; }
+            public String modelName { get; set; }
+            public String targetSchema { get; set; }
+
+            public String StringLiteralPattern { get; set; }
+            public String QuotedIdentifierPattern { get; set; }
+            public String ParameterNamePattern { get; set; }
+            public int ParameterNameMaxLength { get; set; }
+            public String ParameterMarkerPattern { get; set; }
+            public String ParameterMarkerFormat { get; set; }
+            public IdentifierCase IdentifierCase { get; set; }
+            public String IdentifierPattern { get; set; }
+            public String CompositeIdentifierSeparatorPattern { get; set; }
+
+            internal string STable(Table Table, DbCommandBuilder cb) {
+                if (cb.CatalogLocation != CatalogLocation.Start) throw new NotSupportedException("CatalogLocation: " + cb.CatalogLocation);
+                return ""
+                    + cb.QuoteIdentifier(Table.CatalogName)
+                    + cb.CatalogSeparator
+                    + cb.QuoteIdentifier(Table.SchemaName)
+                    + cb.SchemaSeparator
+                    + cb.QuoteIdentifier(Table.Name)
+                    ;
+            }
+
+            internal object DbObjectName(Table Table, DbCommandBuilder cb) {
+                return ""
+                    + cb.QuoteIdentifier(Table.CatalogName)
+                    + cb.CatalogSeparator
+                    + cb.QuoteIdentifier(Table.SchemaName)
+                    + cb.SchemaSeparator
+                    + cb.QuoteIdentifier(Table.Name)
+                    ;
+            }
+
+            internal String SColumn(Column p, DbCommandBuilder cb) {
+                return cb.QuoteIdentifier(p.Name);
+            }
+
+            internal object Precision(Column dbc) {
+                int? v = new int?();
+                if (dbc != null) v = dbc.ColumnType.Precision;
+                return v ?? 0;
+            }
+
+            internal object Scale(Column dbc) {
+                int? v = new int?();
+                if (dbc != null) v = dbc.ColumnType.Scale;
+                return v ?? 0;
+            }
+
+            internal object Size(Column dbc) {
+                int? v = new int?();
+                if (dbc != null) {
+                    v = dbc.ColumnType.MaxLength;
+                    if (v.HasValue && v.Value == -1) v = null;
+                    if (v.HasValue && v.Value == 0x3FFFFFFF) v = null;
+                    if (v.HasValue && v.Value == 0x7FFFFFFF) v = null;
+                }
+                return v ?? 0;
+            }
+
+            internal object ProviderType(DbParameter dbp, Column dbc) {
+                if (dbc != null)
+                    return dbc.ColumnType.TypeName;
+                foreach (var storeType in providerManifest.GetStoreTypes()) {
+                    if (storeType.ClrEquivalentType.Name == dbp.DbType + "") {
+                        if (storeType.BuiltInTypeKind == BuiltInTypeKind.PrimitiveType) {
+                            return storeType.Name;
+                        }
+                    }
+                }
+                return null;
+            }
+
+            internal object CColumn(string p) {
+                return p;
+            }
+
+            private string CLRSafe(TableOrView Table) { return TSimpleIdentifier(Table.Name, ""); }
+            private string CLRSafe(TableOrView Table, string prefix) { return TSimpleIdentifier(Table.Name, prefix); }
+            private string CLRSafe(Column dbc) { return TSimpleIdentifier(dbc.Name, ""); }
+            private string CLRSafe(Column dbc, string prefix) { return TSimpleIdentifier(dbc.Name, prefix); }
+            private string CLRSafe(String s, string prefix) { return TSimpleIdentifier(s, prefix); }
+            private object CLRSafe(ForeignKey Tfk) { return TSimpleIdentifier(Tfk.Constraint.Name, ""); }
+
+            internal object Generator_TableClassName(Table Table) { return String.Format("{0}DataTable", CLRSafe(Table, "_")); }
+            internal object Generator_TableVarName(Table Table) { return String.Format("table{0}", CLRSafe(Table)); }
+            internal object Generator_TablePropName(Table Table) { return String.Format("{0}", CLRSafe(Table, "_")); }
+            internal object Generator_RowDeletingName(Table Table) { return String.Format("{0}RowDeleting", CLRSafe(Table, "_")); }
+            internal object Generator_RowChangingName(Table Table) { return String.Format("{0}RowChanging", CLRSafe(Table, "_")); }
+            internal object Generator_RowEvHandlerName(Table Table) { return String.Format("{0}RowChangeEventHandler", CLRSafe(Table, "_")); }
+            internal object Generator_RowDeletedName(Table Table) { return String.Format("{0}RowDeleted", CLRSafe(Table, "_")); }
+            internal object Generator_UserTableName(Table Table) { return String.Format("{0}", CLRSafe(Table)); }
+            internal object Generator_RowChangedName(Table Table) { return String.Format("{0}RowChanged", CLRSafe(Table, "_")); }
+            internal object Generator_RowEvArgName(Table Table) { return String.Format("{0}RowChangeEvent", CLRSafe(Table, "_")); }
+            internal object Generator_RowClassName(Table Table) { return String.Format("{0}Row", CLRSafe(Table, "_")); }
+
+            internal object Generator_ColumnVarNameInTable(Column dbc) { return String.Format("column{0}", CLRSafe(dbc)); }
+            internal object Generator_ColumnPropNameInRow(Column dbc) { return String.Format("{0}", CLRSafe(dbc, "_")); }
+            internal object Generator_ColumnPropNameInTable(Column dbc) { return String.Format("Id{0}", CLRSafe(dbc)); }
+
+            internal object Generator_UserColumnName(Column dbc) { return String.Format("{0}", (dbc.Name)); } // raw
+
+            internal object Generator_DataSetName(string dbn) { return "DataSet1"; }
+
+            internal object Generator_UserDSName(string dbn) { return "DataSet1"; }
+
+            internal object xstype(Column dbc) {
+                foreach (var storeType in providerManifest.GetStoreTypes()) {
+                    if (storeType.Name == dbc.ColumnType.TypeName) {
+                        if (storeType.BuiltInTypeKind == BuiltInTypeKind.PrimitiveType) {
+                            if (storeType.ClrEquivalentType == typeof(string)) return "xs:string";
+                            if (storeType.ClrEquivalentType == typeof(int)) return "xs:int";
+                            if (storeType.ClrEquivalentType == typeof(long)) return "xs:long";
+                            if (storeType.ClrEquivalentType == typeof(bool)) return "xs:boolean";
+                            if (storeType.ClrEquivalentType == typeof(DateTime)) return "xs:dateTime";
+                            if (storeType.ClrEquivalentType == typeof(double)) return "xs:double";
+                            if (storeType.ClrEquivalentType == typeof(decimal)) return "xs:decimal";
+                            if (storeType.ClrEquivalentType == typeof(float)) return "xs:float";
+                            if (storeType.ClrEquivalentType == typeof(short)) return "xs:short";
+                            if (storeType.ClrEquivalentType == typeof(byte)) return "xs:unsignedByte";
+                        }
+                    }
+                }
+                return "xs:string";
+            }
+
+            public String TSimpleIdentifier(String s, String defaultPrefix) {
+                s = Regex.Replace(s, "[\\[\\]\\/\\-\\.\\\\：]+", "_").TrimStart('_');
+                if (s.Length >= 1 && char.IsNumber(s[0])) s = defaultPrefix + s;
+                return s;
+            }
+
+            public String DataAccessorName(Table Table) { return String.Format("{0}TableAdapter", Table.Name); }
+
+            public String GeneratorDataComponentClassName(Table Table) { return CLRSafe(DataAccessorName(Table), "_"); }
+
+            public String UserDataComponentName(Table Table) { return DataAccessorName(Table); }
+
+            public String xsname(Column dbc) { return XSafe(dbc.Name); }
+            public String xsname(TableOrView Table) { return XSafe(Table.Name); }
+            public String xsname(Constraint Tc) { return XSafe(Tc.Name); }
+
+            private string XSafe(String p) { // xs:name safe
+                String s = null;
+                if (!String.IsNullOrEmpty(p)) {
+                    s = String.Empty;
+                    for (int x = 0; x < p.Length; x++) {
+                        char c = p[x];
+                        if ((x == 0 && !char.IsLetter(c)) || c == '：' || (c < 256 && c != '_' && c != '#' && !char.IsLetterOrDigit(c))) {
+                            s += String.Format("_x{0:X4}_", (int)c);
+                        }
+                        else {
+                            s += c;
+                        }
+                    }
+                }
+                return s;
+            }
+
+
+            internal object Generator_UserChildTable(TableOrView tableOrView) { return CLRSafe(tableOrView); }
+            internal object Generator_ChildPropName(Column column) { return String.Format("Get{0}Rows", CLRSafe(column.Parent)); }
+            internal object Generator_UserRelationName(ForeignKey Tfk) { return CLRSafe(Tfk); }
+            internal object Generator_RelationVarName(ForeignKey Tfk) { return String.Format("relation{0}", CLRSafe(Tfk)); }
+            internal object Generator_UserParentTable(TableOrView tableOrView) { return CLRSafe(tableOrView); }
+            internal object Generator_ParentPropName(Column column) { return String.Format("{0}Row", CLRSafe(column.Parent, "_")); }
+        }
+
+        class CTUt {
+            public static int? MaxLength(TypeSpecification ts) {
+                int? v = ts.MaxLength;
+                if (v.HasValue) {
+                    if (v.Value == -1) return new int?();
+                    if (v.Value == 0x3FFFFFFF) return new int?();
+                    if (v.Value == 0x7FFFFFFF) return new int?();
+                }
+                return null;
             }
         }
     }
