@@ -1,6 +1,7 @@
 ﻿EdmGen06
  /ModelGen <connectionString> <providerName> <modelName> <targetSchema> <ver>
  /DataSet <connectionString> <providerName> <modelName> <targetSchema>
+ /DataSet.cs <DataSet1.xsd> <DataSet1.cs>
 
 rem [SqlServer Example]
 

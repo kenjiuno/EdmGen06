@@ -1,16 +1,4 @@
-﻿using EdmGen06.Properties;
-using System;
-using System.Collections.Generic;
-using System.Diagnostics;
-using System.IO;
-using System.Linq;
-using System.Text;
-using System.Text.RegularExpressions;
-using System.Threading.Tasks;
-using System.Xml;
-using System.Xml.Linq;
-
-#if ENTITIES6
+﻿#if ENTITIES6
 using System.Data.Entity.Core.Common;
 using System.Data.Entity.Core.Metadata.Edm;
 using System.Data.Entity.Core.Objects;
@@ -22,8 +10,27 @@ using System.Data.Metadata.Edm;
 using System.Data.Objects;
 using System.Data.Objects.DataClasses;
 using System.Data.EntityClient;
-using System.Data;
 #endif
+
+using EdmGen06.Properties;
+using System;
+using System.Collections.Generic;
+using System.Data;
+using System.Diagnostics;
+using System.IO;
+using System.Linq;
+using System.Text;
+using System.Text.RegularExpressions;
+using System.Threading.Tasks;
+using System.Xml;
+using System.Xml.Linq;
+using System.Xml.XPath;
+using System.CodeDom;
+using System.CodeDom.Compiler;
+using System.ComponentModel;
+using System.Xml.Serialization;
+using System.Xml.Schema;
+using System.Runtime.Serialization;
 
 namespace EdmGen06 {
     class Program {
@@ -44,6 +51,13 @@ namespace EdmGen06 {
                     args[2],
                     args[3],
                     args[4]
+                    );
+                return;
+            }
+            else if (args.Length >= 3 && args[0] == "/DataSet.cs") {
+                new Program().DataSet_cs(
+                    args[1],
+                    args[2]
                     );
                 return;
             }
@@ -101,7 +115,7 @@ namespace EdmGen06 {
 
         TraceSource trace = new TraceSource(APP, SourceLevels.All);
 
-        void ModelGen(String connectionString, String providerName, String modelName, String targetSchema, Version yver) {
+        public void ModelGen(String connectionString, String providerName, String modelName, String targetSchema, Version yver) {
             String baseDir = Environment.CurrentDirectory;
 
             String fpssdl3 = Path.Combine(baseDir, modelName + ".ssdl");
@@ -346,7 +360,7 @@ namespace EdmGen06 {
                             }
                             if (dbc.ColumnType.MaxLength.HasValue) {
                                 int maxLen = dbc.ColumnType.MaxLength.Value;
-                                if (maxLen != -1 && maxLen != 0x3FFFFFFF && maxLen != 0x7FFFFFFF) {
+                                if (maxLen != -1) {
                                     ssdlProperty.SetAttributeValue("MaxLength", dbc.ColumnType.MaxLength.Value + "");
                                     csdlProperty.SetAttributeValue("MaxLength", dbc.ColumnType.MaxLength.Value + "");
                                 }
@@ -741,11 +755,11 @@ namespace EdmGen06 {
             }
         }
 
-        XNamespace xxs = "http://www.w3.org/2001/XMLSchema";
-        XNamespace xmsdata = "urn:schemas-microsoft-com:xml-msdata";
-        XNamespace xmsprop = "urn:schemas-microsoft-com:xml-msprop";
+        static readonly XNamespace xxs = "http://www.w3.org/2001/XMLSchema";
+        static readonly XNamespace xmsdata = "urn:schemas-microsoft-com:xml-msdata";
+        static readonly XNamespace xmsprop = "urn:schemas-microsoft-com:xml-msprop";
 
-        void DataSet(String connectionString, String providerName, String modelName, String targetSchema) {
+        public void DataSet(String connectionString, String providerName, String modelName, String targetSchema) {
             String baseDir = Environment.CurrentDirectory;
 
             trace.TraceEvent(TraceEventType.Information, 101, "Getting System.Data.Common.DbProviderFactory from '{0}'", providerName);
@@ -853,7 +867,6 @@ namespace EdmGen06 {
                     XDocument xsd = new XDocument();
 
                     XNamespace nsMSTNS = "http://tempuri.org/DataSet1.xsd";
-                    XNamespace nsDS = "urn:schemas-microsoft-com:xml-msdatasource";
 
                     String dbn = db.Database;
                     String dataSet1 = modelName;
@@ -1023,8 +1036,8 @@ namespace EdmGen06 {
 
                             foreach (var dbc in Table.Columns) {
                                 xMappings.Add(new XElement(nsDS + "Mapping"
-                                    , new XAttribute("SourceColumn", dbc.Name)
-                                    , new XAttribute("DataSetColumn", dut.CColumn(dbc.Name))
+                                    , new XAttribute("SourceColumn", dut.SourceColumn(dbc))
+                                    , new XAttribute("DataSetColumn", dut.DataSetColumn(dbc))
                                     ));
 
                                 XElement xce;
@@ -1178,7 +1191,7 @@ namespace EdmGen06 {
                     ;
             }
 
-            internal object DbObjectName(Table Table, DbCommandBuilder cb) {
+            public String DbObjectName(Table Table, DbCommandBuilder cb) {
                 return ""
                     + cb.QuoteIdentifier(Table.CatalogName)
                     + cb.CatalogSeparator
@@ -1192,30 +1205,28 @@ namespace EdmGen06 {
                 return cb.QuoteIdentifier(p.Name);
             }
 
-            internal object Precision(Column dbc) {
+            public String Precision(Column dbc) {
                 int? v = new int?();
                 if (dbc != null) v = dbc.ColumnType.Precision;
-                return v ?? 0;
+                return Convert.ToString(v ?? 0);
             }
 
-            internal object Scale(Column dbc) {
+            public String Scale(Column dbc) {
                 int? v = new int?();
                 if (dbc != null) v = dbc.ColumnType.Scale;
-                return v ?? 0;
+                return Convert.ToString(v ?? 0);
             }
 
-            internal object Size(Column dbc) {
+            public String Size(Column dbc) {
                 int? v = new int?();
                 if (dbc != null) {
                     v = dbc.ColumnType.MaxLength;
                     if (v.HasValue && v.Value == -1) v = null;
-                    if (v.HasValue && v.Value == 0x3FFFFFFF) v = null;
-                    if (v.HasValue && v.Value == 0x7FFFFFFF) v = null;
                 }
-                return v ?? 0;
+                return Convert.ToString(v ?? 0);
             }
 
-            internal object ProviderType(DbParameter dbp, Column dbc) {
+            public String ProviderType(DbParameter dbp, Column dbc) {
                 if (dbc != null)
                     return dbc.ColumnType.TypeName;
                 foreach (var storeType in providerManifest.GetStoreTypes()) {
@@ -1228,40 +1239,36 @@ namespace EdmGen06 {
                 return null;
             }
 
-            internal object CColumn(string p) {
-                return p;
-            }
-
             private string CLRSafe(TableOrView Table) { return TSimpleIdentifier(Table.Name, ""); }
             private string CLRSafe(TableOrView Table, string prefix) { return TSimpleIdentifier(Table.Name, prefix); }
             private string CLRSafe(Column dbc) { return TSimpleIdentifier(dbc.Name, ""); }
             private string CLRSafe(Column dbc, string prefix) { return TSimpleIdentifier(dbc.Name, prefix); }
             private string CLRSafe(String s, string prefix) { return TSimpleIdentifier(s, prefix); }
-            private object CLRSafe(ForeignKey Tfk) { return TSimpleIdentifier(Tfk.Constraint.Name, ""); }
+            private string CLRSafe(ForeignKey Tfk) { return TSimpleIdentifier(Tfk.Constraint.Name, ""); }
 
-            internal object Generator_TableClassName(Table Table) { return String.Format("{0}DataTable", CLRSafe(Table, "_")); }
-            internal object Generator_TableVarName(Table Table) { return String.Format("table{0}", CLRSafe(Table)); }
-            internal object Generator_TablePropName(Table Table) { return String.Format("{0}", CLRSafe(Table, "_")); }
-            internal object Generator_RowDeletingName(Table Table) { return String.Format("{0}RowDeleting", CLRSafe(Table, "_")); }
-            internal object Generator_RowChangingName(Table Table) { return String.Format("{0}RowChanging", CLRSafe(Table, "_")); }
-            internal object Generator_RowEvHandlerName(Table Table) { return String.Format("{0}RowChangeEventHandler", CLRSafe(Table, "_")); }
-            internal object Generator_RowDeletedName(Table Table) { return String.Format("{0}RowDeleted", CLRSafe(Table, "_")); }
-            internal object Generator_UserTableName(Table Table) { return String.Format("{0}", CLRSafe(Table)); }
-            internal object Generator_RowChangedName(Table Table) { return String.Format("{0}RowChanged", CLRSafe(Table, "_")); }
-            internal object Generator_RowEvArgName(Table Table) { return String.Format("{0}RowChangeEvent", CLRSafe(Table, "_")); }
-            internal object Generator_RowClassName(Table Table) { return String.Format("{0}Row", CLRSafe(Table, "_")); }
+            public String Generator_TableClassName(Table Table) { return String.Format("{0}DataTable", CLRSafe(Table, "_")); }
+            public String Generator_TableVarName(Table Table) { return String.Format("table{0}", CLRSafe(Table)); }
+            public String Generator_TablePropName(Table Table) { return String.Format("{0}", CLRSafe(Table, "_")); }
+            public String Generator_RowDeletingName(Table Table) { return String.Format("{0}RowDeleting", CLRSafe(Table, "_")); }
+            public String Generator_RowChangingName(Table Table) { return String.Format("{0}RowChanging", CLRSafe(Table, "_")); }
+            public String Generator_RowEvHandlerName(Table Table) { return String.Format("{0}RowChangeEventHandler", CLRSafe(Table, "_")); }
+            public String Generator_RowDeletedName(Table Table) { return String.Format("{0}RowDeleted", CLRSafe(Table, "_")); }
+            public String Generator_UserTableName(Table Table) { return String.Format("{0}", CLRSafe(Table)); }
+            public String Generator_RowChangedName(Table Table) { return String.Format("{0}RowChanged", CLRSafe(Table, "_")); }
+            public String Generator_RowEvArgName(Table Table) { return String.Format("{0}RowChangeEvent", CLRSafe(Table, "_")); }
+            public String Generator_RowClassName(Table Table) { return String.Format("{0}Row", CLRSafe(Table, "_")); }
 
-            internal object Generator_ColumnVarNameInTable(Column dbc) { return String.Format("column{0}", CLRSafe(dbc)); }
-            internal object Generator_ColumnPropNameInRow(Column dbc) { return String.Format("{0}", CLRSafe(dbc, "_")); }
-            internal object Generator_ColumnPropNameInTable(Column dbc) { return String.Format("Id{0}", CLRSafe(dbc)); }
+            public String Generator_ColumnVarNameInTable(Column dbc) { return String.Format("column{0}", CLRSafe(dbc)); }
+            public String Generator_ColumnPropNameInRow(Column dbc) { return String.Format("{0}", CLRSafe(dbc, "_")); }
+            public String Generator_ColumnPropNameInTable(Column dbc) { return String.Format("Id{0}", CLRSafe(dbc)); }
 
-            internal object Generator_UserColumnName(Column dbc) { return String.Format("{0}", (dbc.Name)); } // raw
+            public String Generator_UserColumnName(Column dbc) { return String.Format("{0}", (dbc.Name)); } // raw
 
-            internal object Generator_DataSetName(string dbn) { return "DataSet1"; }
+            public String Generator_DataSetName(string dbn) { return "DataSet1"; }
 
-            internal object Generator_UserDSName(string dbn) { return "DataSet1"; }
+            public String Generator_UserDSName(string dbn) { return "DataSet1"; }
 
-            internal object xstype(Column dbc) {
+            public String xstype(Column dbc) {
                 foreach (var storeType in providerManifest.GetStoreTypes()) {
                     if (storeType.Name == dbc.ColumnType.TypeName) {
                         if (storeType.BuiltInTypeKind == BuiltInTypeKind.PrimitiveType) {
@@ -1278,7 +1285,11 @@ namespace EdmGen06 {
                         }
                     }
                 }
-                return "xs:string";
+                if (false) { }
+                else if (dbc.ColumnType.TypeName == "time") return "xs:duration";
+                else if (dbc.ColumnType.TypeName == "oid") return "xs:long";
+                else if (dbc.ColumnType.TypeName == "bytea") return "xs:hexBinary";
+                else return "xs:string";
             }
 
             public String TSimpleIdentifier(String s, String defaultPrefix) {
@@ -1314,24 +1325,1840 @@ namespace EdmGen06 {
                 return s;
             }
 
-
-            internal object Generator_UserChildTable(TableOrView tableOrView) { return CLRSafe(tableOrView); }
-            internal object Generator_ChildPropName(Column column) { return String.Format("Get{0}Rows", CLRSafe(column.Parent)); }
-            internal object Generator_UserRelationName(ForeignKey Tfk) { return CLRSafe(Tfk); }
-            internal object Generator_RelationVarName(ForeignKey Tfk) { return String.Format("relation{0}", CLRSafe(Tfk)); }
-            internal object Generator_UserParentTable(TableOrView tableOrView) { return CLRSafe(tableOrView); }
-            internal object Generator_ParentPropName(Column column) { return String.Format("{0}Row", CLRSafe(column.Parent, "_")); }
+            public String Generator_UserChildTable(TableOrView tableOrView) { return CLRSafe(tableOrView); }
+            public String Generator_ChildPropName(Column column) { return String.Format("Get{0}Rows", CLRSafe(column.Parent)); }
+            public String Generator_UserRelationName(ForeignKey Tfk) { return CLRSafe(Tfk); }
+            public String Generator_RelationVarName(ForeignKey Tfk) { return String.Format("relation{0}", CLRSafe(Tfk)); }
+            public String Generator_UserParentTable(TableOrView tableOrView) { return CLRSafe(tableOrView); }
+            public String Generator_ParentPropName(Column column) { return String.Format("{0}Row", CLRSafe(column.Parent, "_")); }
+            public String SourceColumn(Column dbc) { return dbc.Name; }
+            public String DataSetColumn(Column dbc) { return dbc.Name; }
         }
 
-        class CTUt {
-            public static int? MaxLength(TypeSpecification ts) {
-                int? v = ts.MaxLength;
-                if (v.HasValue) {
-                    if (v.Value == -1) return new int?();
-                    if (v.Value == 0x3FFFFFFF) return new int?();
-                    if (v.Value == 0x7FFFFFFF) return new int?();
+        XNamespace nsDS = "urn:schemas-microsoft-com:xml-msdatasource";
+
+        public void DataSet_cs(String fpxsd, String fpcs) {
+            //XDocument xsd = XDocument.Load(fpxsd);
+
+            CodeNamespace csns = new CodeNamespace("Test");
+
+            DataSet ds = new System.Data.DataSet();
+            ds.ReadXmlSchema(fpxsd);
+
+            String targetNamespace = ds.Namespace;
+
+            {
+                String Generator_DataSetName = "" + ds.ExtendedProperties["Generator_DataSetName"];
+
+                var dataSet1 = new CodeTypeDeclaration(Generator_DataSetName);
+                csns.Types.Add(dataSet1);
+
+                dataSet1.CustomAttributes.Add(new CodeAttributeDeclaration(
+                    new CodeTypeReference(typeof(SerializableAttribute))
+                    ));
+                dataSet1.CustomAttributes.Add(new CodeAttributeDeclaration(
+                    new CodeTypeReference(typeof(DesignerCategoryAttribute))
+                    , new CodeAttributeArgument(new CodePrimitiveExpression("code"))
+                    ));
+                dataSet1.CustomAttributes.Add(new CodeAttributeDeclaration(
+                    new CodeTypeReference(typeof(ToolboxItemAttribute))
+                    , new CodeAttributeArgument(new CodePrimitiveExpression(true))
+                    ));
+                dataSet1.CustomAttributes.Add(new CodeAttributeDeclaration(
+                    new CodeTypeReference(typeof(XmlSchemaProviderAttribute))
+                    , new CodeAttributeArgument(new CodePrimitiveExpression("GetTypedDataSetSchema"))
+                    ));
+                dataSet1.CustomAttributes.Add(new CodeAttributeDeclaration(
+                    new CodeTypeReference(typeof(XmlRootAttribute))
+                    , new CodeAttributeArgument(new CodePrimitiveExpression("vs.data.DataSet"))
+                    ));
+                dataSet1.BaseTypes.Add(new CodeTypeReference(typeof(DataSet)));
+
+                foreach (DataTable dt in ds.Tables) {
+                    String Generator_TableClassName = "" + dt.ExtendedProperties["Generator_TableClassName"];
+                    String Generator_TableVarName = "" + dt.ExtendedProperties["Generator_TableVarName"];
+                    var privateTable = new CodeMemberField(Generator_TableClassName, Generator_TableVarName);
+
+                    dataSet1.Members.Add(privateTable);
                 }
-                return null;
+                foreach (DataRelation rel in ds.Relations) {
+                    String Generator_RelationVarName = "" + rel.ExtendedProperties["Generator_RelationVarName"];
+                    var privateRel = new CodeMemberField(typeof(DataRelation), Generator_RelationVarName);
+                    dataSet1.Members.Add(privateRel);
+                }
+
+                dataSet1.Members.Add(new CodeMemberField(typeof(SchemaSerializationMode), "_schemaSerializationMode") { InitExpression = new CodeFieldReferenceExpression(new CodeTypeReferenceExpression(typeof(SchemaSerializationMode)), "IncludeSchema") });
+
+                // ctor()
+                {
+                    var ctor = new CodeConstructor();
+                    ctor.Attributes = MemberAttributes.Public;
+                    dataSet1.Members.Add(ctor);
+
+                    ctor.Statements.Add(new CodeMethodInvokeExpression(new CodeThisReferenceExpression(), "BeginInit"));
+                    ctor.Statements.Add(new CodeMethodInvokeExpression(new CodeThisReferenceExpression(), "InitClass"));
+
+                    ctor.Statements.Add(new CodeVariableDeclarationStatement(typeof(CollectionChangeEventHandler), "schemaChangedHandler") {
+                        InitExpression = new CodeObjectCreateExpression(typeof(CollectionChangeEventHandler), new CodeMethodReferenceExpression(new CodeThisReferenceExpression(), "SchemaChanged"))
+                    });
+                    ctor.Statements.Add(new CodeAttachEventStatement(new CodeEventReferenceExpression(new CodePropertyReferenceExpression(new CodeThisReferenceExpression(), "Tables"), "CollectionChanged"), new CodeVariableReferenceExpression("schemaChangedHandler")));
+                    ctor.Statements.Add(new CodeAttachEventStatement(new CodeEventReferenceExpression(new CodePropertyReferenceExpression(new CodeThisReferenceExpression(), "Relations"), "CollectionChanged"), new CodeVariableReferenceExpression("schemaChangedHandler")));
+                    ctor.Statements.Add(new CodeMethodInvokeExpression(new CodeThisReferenceExpression(), "EndInit"));
+                }
+
+                foreach (DataTable dt in ds.Tables) {
+                    String Generator_TableClassName = "" + dt.ExtendedProperties["Generator_TableClassName"];
+                    String Generator_TableVarName = "" + dt.ExtendedProperties["Generator_TableVarName"];
+                    String Generator_TablePropName = "" + dt.ExtendedProperties["Generator_TablePropName"];
+
+                    var publicTable = new CodeMemberProperty();
+                    publicTable.Attributes = MemberAttributes.Public | MemberAttributes.Final;
+                    publicTable.Type = new CodeTypeReference(Generator_TableClassName);
+                    publicTable.Name = Generator_TablePropName;
+                    publicTable.GetStatements.Add(new CodeMethodReturnStatement(new CodePropertyReferenceExpression(new CodeThisReferenceExpression(), Generator_TableVarName)));
+
+                    publicTable.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                        ));
+                    publicTable.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(BrowsableAttribute))
+                        , new CodeAttributeArgument(new CodePrimitiveExpression(false))
+                        ));
+                    publicTable.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(DesignerSerializationVisibilityAttribute))
+                        , new CodeAttributeArgument(new CodeFieldReferenceExpression(new CodeTypeReferenceExpression(typeof(DesignerSerializationVisibility)), "Content"))
+                        ));
+
+                    dataSet1.Members.Add(publicTable);
+                }
+
+                // SchemaSerializationMode
+                {
+                    var mem = new CodeMemberProperty();
+                    mem.Attributes = MemberAttributes.Public | MemberAttributes.Override;
+                    mem.Type = new CodeTypeReference(typeof(SchemaSerializationMode));
+                    mem.Name = "SchemaSerializationMode";
+
+                    mem.GetStatements.Add(new CodeMethodReturnStatement(new CodeFieldReferenceExpression(new CodeThisReferenceExpression(), "_schemaSerializationMode")));
+
+                    mem.SetStatements.Add(new CodeAssignStatement(
+                        new CodeFieldReferenceExpression(new CodeThisReferenceExpression(), "_schemaSerializationMode"),
+                        new CodePropertySetValueReferenceExpression()
+                        ));
+
+                    mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                        ));
+                    mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(BrowsableAttribute))
+                        , new CodeAttributeArgument(new CodePrimitiveExpression(true))
+                        ));
+                    mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(DesignerSerializationVisibilityAttribute))
+                        , new CodeAttributeArgument(new CodeFieldReferenceExpression(new CodeTypeReferenceExpression(typeof(DesignerSerializationVisibility)), "Visible"))
+                        ));
+
+                    dataSet1.Members.Add(mem);
+                }
+
+                // Tables
+                // Relations
+
+                // InitializeDerivedDataSet
+                {
+                    var mem = new CodeMemberMethod();
+                    dataSet1.Members.Add(mem);
+                    mem.Attributes = MemberAttributes.Public | MemberAttributes.Override;
+                    mem.Name = "InitializeDerivedDataSet";
+
+                    mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                        ));
+
+                    mem.Statements.Add(new CodeMethodInvokeExpression(new CodeThisReferenceExpression(), "BeginInit"));
+                    mem.Statements.Add(new CodeMethodInvokeExpression(new CodeThisReferenceExpression(), "InitClass"));
+                    mem.Statements.Add(new CodeMethodInvokeExpression(new CodeThisReferenceExpression(), "EndInit"));
+
+                }
+
+                // Clone
+                {
+                    var mem = new CodeMemberMethod();
+                    dataSet1.Members.Add(mem);
+                    mem.Attributes = MemberAttributes.Public | MemberAttributes.Override;
+                    mem.ReturnType = new CodeTypeReference(typeof(DataSet));
+                    mem.Name = "Clone";
+
+                    mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                        ));
+
+                    mem.Statements.Add(new CodeVariableDeclarationStatement(new CodeTypeReference(dataSet1.Name), "cln") {
+                        InitExpression = new CodeCastExpression(
+                            new CodeTypeReference(dataSet1.Name)
+                            , new CodeMethodInvokeExpression(
+                                new CodeBaseReferenceExpression(), "Clone")
+                            )
+                    });
+                    mem.Statements.Add(
+                        new CodeMethodInvokeExpression(
+                            new CodeVariableReferenceExpression("cln"), "InitVars")
+                        );
+                    mem.Statements.Add(new CodeAssignStatement(
+                        new CodePropertyReferenceExpression(
+                            new CodeVariableReferenceExpression("cln"), "SchemaSerializationMode")
+                        , new CodePropertyReferenceExpression(
+                            new CodeThisReferenceExpression(), "SchemaSerializationMode")
+                        ));
+                    mem.Statements.Add(new CodeMethodReturnStatement(
+                        new CodeVariableReferenceExpression("cln")
+                        ));
+                }
+
+                // ShouldSerializeTables
+                {
+                    var mem = new CodeMemberMethod();
+                    dataSet1.Members.Add(mem);
+                    mem.Attributes = MemberAttributes.Family | MemberAttributes.Override;
+                    mem.ReturnType = new CodeTypeReference(typeof(bool));
+                    mem.Name = "ShouldSerializeTables";
+
+                    mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                        ));
+
+                    mem.Statements.Add(
+                        new CodeMethodReturnStatement(new CodePrimitiveExpression(false))
+                        );
+                }
+
+                // ShouldSerializeRelations
+                {
+                    var mem = new CodeMemberMethod();
+                    dataSet1.Members.Add(mem);
+                    mem.Attributes = MemberAttributes.Family | MemberAttributes.Override;
+                    mem.ReturnType = new CodeTypeReference(typeof(bool));
+                    mem.Name = "ShouldSerializeRelations";
+
+                    mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                        ));
+
+                    mem.Statements.Add(
+                        new CodeMethodReturnStatement(new CodePrimitiveExpression(false))
+                        );
+                }
+
+                // ReadXmlSerializable
+                {
+                    var mem = new CodeMemberMethod();
+                    dataSet1.Members.Add(mem);
+                    mem.Attributes = MemberAttributes.Family | MemberAttributes.Override;
+                    mem.Name = "ReadXmlSerializable";
+
+                    mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                        ));
+
+                    mem.Parameters.Add(new CodeParameterDeclarationExpression(typeof(XmlReader), "reader"));
+
+                    CodeStatement insertAt;
+
+                    var if1 = new CodeConditionStatement(
+                        // condition
+                        new CodeBinaryOperatorExpression(
+                        // left
+                            new CodeMethodInvokeExpression(
+                                new CodeThisReferenceExpression(),
+                                "DetermineSchemaSerializationMode",
+                                new CodeVariableReferenceExpression("reader")
+                                )
+                        // op
+                            , CodeBinaryOperatorType.ValueEquality
+                        // right
+                            , new CodeFieldReferenceExpression(
+                                new CodeTypeReferenceExpression(typeof(SchemaSerializationMode))
+                                , "IncludeSchema"
+                            )
+                        )
+                        // true
+                        , new CodeStatement[] {
+                            new CodeExpressionStatement(
+                                new CodeMethodInvokeExpression(
+                                    new CodeThisReferenceExpression()
+                                    , "Reset"
+                                    )
+                                )
+                            , new CodeVariableDeclarationStatement(
+                                typeof(DataSet)
+                                , "ds"
+                                , new CodeObjectCreateExpression(
+                                    typeof(DataSet)
+                                    )
+                                )
+                            , new CodeExpressionStatement(
+                                new CodeMethodInvokeExpression(
+                                    new CodeVariableReferenceExpression("ds")
+                                    , "ReadXml"
+                                    , new CodeVariableReferenceExpression("reader")
+                                    )
+                                )
+                            , insertAt = new CodeAssignStatement(
+                                new CodePropertyReferenceExpression(
+                                    new CodeThisReferenceExpression()
+                                    , "DataSetName"
+                                    )
+                                , new CodePropertyReferenceExpression(
+                                    new CodeVariableReferenceExpression("ds")
+                                    , "DataSetName"
+                                    )
+                                )
+                            , new CodeAssignStatement(
+                                new CodePropertyReferenceExpression(
+                                    new CodeThisReferenceExpression()
+                                    , "Prefix"
+                                    )
+                                , new CodePropertyReferenceExpression(
+                                    new CodeVariableReferenceExpression("ds")
+                                    , "Prefix"
+                                    )
+                                )
+                            , new CodeAssignStatement(
+                                new CodePropertyReferenceExpression(
+                                    new CodeThisReferenceExpression()
+                                    , "Namespace"
+                                    )
+                                , new CodePropertyReferenceExpression(
+                                    new CodeVariableReferenceExpression("ds")
+                                    , "Namespace"
+                                    )
+                                )
+                            , new CodeAssignStatement(
+                                new CodePropertyReferenceExpression(
+                                    new CodeThisReferenceExpression()
+                                    , "Locale"
+                                    )
+                                , new CodePropertyReferenceExpression(
+                                    new CodeVariableReferenceExpression("ds")
+                                    , "Locale"
+                                    )
+                                )
+                            , new CodeAssignStatement(
+                                new CodePropertyReferenceExpression(
+                                    new CodeThisReferenceExpression()
+                                    , "CaseSensitive"
+                                    )
+                                , new CodePropertyReferenceExpression(
+                                    new CodeVariableReferenceExpression("ds")
+                                    , "CaseSensitive"
+                                    )
+                                )
+                            , new CodeAssignStatement(
+                                new CodePropertyReferenceExpression(
+                                    new CodeThisReferenceExpression()
+                                    , "EnforceConstraints"
+                                    )
+                                , new CodePropertyReferenceExpression(
+                                    new CodeVariableReferenceExpression("ds")
+                                    , "EnforceConstraints"
+                                    )
+                                )
+                            , new CodeExpressionStatement(  
+                                new CodeMethodInvokeExpression(
+                                    new CodeThisReferenceExpression()
+                                    , "Merge"
+                                    , new CodeVariableReferenceExpression("ds")
+                                    , new CodePrimitiveExpression(false)
+                                    , new CodeFieldReferenceExpression(
+                                        new CodeTypeReferenceExpression(typeof(MissingSchemaAction))
+                                        , "Add"
+                                        )
+                                    )
+                                )
+                            , new CodeExpressionStatement(
+                                new CodeMethodInvokeExpression(
+                                    new CodeThisReferenceExpression()
+                                    , "InitVars"
+                                    )
+                                ),
+                        }
+                        // false
+                        , new CodeStatement[] {
+                            new CodeExpressionStatement(
+                                new CodeMethodInvokeExpression(
+                                    new CodeThisReferenceExpression()
+                                    , "ReadXml"
+                                    , new CodeVariableReferenceExpression("reader")
+                                    )
+                                )
+                            , new CodeExpressionStatement(
+                                new CodeMethodInvokeExpression(
+                                    new CodeThisReferenceExpression()
+                                    , "InitVars"
+                                    )
+                                ),
+                        }
+                    );
+                    mem.Statements.Add(if1);
+
+                    foreach (DataTable dt in ds.Tables) {
+                        String Generator_TablePropName = "" + dt.ExtendedProperties["Generator_TablePropName"];
+                        String Generator_TableClassName = "" + dt.ExtendedProperties["Generator_TableClassName"];
+
+                        if1.TrueStatements.Insert(
+                            if1.TrueStatements.IndexOf(insertAt)
+                            , new CodeConditionStatement(
+                                new CodeBinaryOperatorExpression(
+                                    new CodeIndexerExpression( // left
+                                        new CodePropertyReferenceExpression(
+                                            new CodeVariableReferenceExpression("ds")
+                                            , "Tables"
+                                                )
+                                            , new CodePrimitiveExpression(Generator_TablePropName)
+                                            )
+                                    , CodeBinaryOperatorType.IdentityInequality // op
+                                    , new CodePrimitiveExpression(null) // right
+                                    )
+                                , new CodeStatement[] { // true
+                                    new CodeExpressionStatement(
+                                        new CodeMethodInvokeExpression(
+                                            new CodePropertyReferenceExpression(
+                                                new CodeBaseReferenceExpression()
+                                                , "Tables"
+                                                )
+                                            , "Add"
+                                            , new CodeObjectCreateExpression(
+                                                Generator_TableClassName
+                                                , new CodeIndexerExpression(
+                                                    new CodePropertyReferenceExpression(
+                                                        new CodeVariableReferenceExpression("ds")
+                                                        , "Tables"
+                                                        )
+                                                    , new CodePrimitiveExpression(Generator_TablePropName)
+                                                    )
+                                                )
+                                            )
+                                        )
+                                }
+                                )
+                            );
+                    }
+                }
+
+                // GetSchemaSerializable
+                {
+                    var mem = new CodeMemberMethod();
+                    mem.Attributes = MemberAttributes.Family | MemberAttributes.Override;
+                    mem.ReturnType = new CodeTypeReference(typeof(XmlSchema));
+                    mem.Name = "GetSchemaSerializable";
+                    dataSet1.Members.Add(mem);
+
+                    mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                        ));
+
+                    mem.Statements.Add(
+                        new CodeVariableDeclarationStatement(
+                            typeof(MemoryStream)
+                            , "stream"
+                            )
+                        );
+                    mem.Statements.Add(
+                        new CodeMethodInvokeExpression(
+                            new CodeThisReferenceExpression()
+                            , "WriteXmlSchema"
+                            , new CodeObjectCreateExpression(
+                                typeof(XmlTextWriter)
+                                , new CodeVariableReferenceExpression("stream")
+                                , new CodePrimitiveExpression(null)
+                                )
+                            )
+                        );
+                    mem.Statements.Add(
+                        new CodeAssignStatement(
+                            new CodePropertyReferenceExpression(
+                                new CodeVariableReferenceExpression("stream")
+                                , "Position"
+                                )
+                            , new CodePrimitiveExpression((int)0)
+                            )
+                        );
+                    mem.Statements.Add(
+                        new CodeMethodReturnStatement(
+                            new CodeMethodInvokeExpression(
+                                new CodeTypeReferenceExpression(typeof(XmlSchema))
+                                , "Read"
+                                , new CodeObjectCreateExpression(
+                                    typeof(XmlTextReader)
+                                    , new CodeVariableReferenceExpression("stream")
+                                    )
+                                , new CodePrimitiveExpression(null)
+                                )
+                            )
+                        );
+                }
+
+                // InitVars
+                {
+                    var mem = new CodeMemberMethod();
+                    mem.Attributes = MemberAttributes.FamilyAndAssembly;
+                    mem.Name = "InitVars";
+                    dataSet1.Members.Add(mem);
+
+                    mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                        ));
+
+                    mem.Statements.Add(
+                        new CodeMethodInvokeExpression(
+                            new CodeThisReferenceExpression()
+                            , "InitVars"
+                            , new CodePrimitiveExpression(true)
+                            )
+                        );
+                }
+
+                // InitVars
+                {
+                    var mem = new CodeMemberMethod();
+                    mem.Attributes = MemberAttributes.FamilyAndAssembly;
+                    mem.Name = "InitVars";
+                    dataSet1.Members.Add(mem);
+
+                    mem.Parameters.Add(
+                        new CodeParameterDeclarationExpression(
+                            typeof(bool)
+                            , "initTable"
+                            )
+                        );
+
+                    mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                        ));
+
+                    foreach (DataTable dt in ds.Tables) {
+                        String Generator_TablePropName = "" + dt.ExtendedProperties["Generator_TablePropName"];
+                        String Generator_TableClassName = "" + dt.ExtendedProperties["Generator_TableClassName"];
+                        String Generator_TableVarName = "" + dt.ExtendedProperties["Generator_TableVarName"];
+
+                        mem.Statements.Add(
+                            new CodeAssignStatement(
+                                new CodeFieldReferenceExpression(
+                                    new CodeThisReferenceExpression()
+                                    , Generator_TableVarName
+                                    )
+                                    , new CodeCastExpression(
+                                        Generator_TableClassName
+                                        , new CodeIndexerExpression(
+                                            new CodePropertyReferenceExpression(
+                                                new CodeBaseReferenceExpression()
+                                                , "Tables"
+                                                )
+                                            , new CodePrimitiveExpression(Generator_TablePropName)
+                                            )
+                                        )
+                                    )
+                            );
+                        mem.Statements.Add(
+                            new CodeConditionStatement(
+                                new CodeBinaryOperatorExpression(
+                                    new CodeBinaryOperatorExpression(// left
+                                        new CodeVariableReferenceExpression("initTable")// left
+                                        , CodeBinaryOperatorType.ValueEquality// op
+                                        , new CodePrimitiveExpression(true)// right
+                                        )
+                                    , CodeBinaryOperatorType.BooleanAnd// op
+                                    , new CodeBinaryOperatorExpression(// right
+                                        new CodeFieldReferenceExpression(// left
+                                            new CodeThisReferenceExpression()
+                                            , Generator_TableVarName
+                                            )
+                                        , CodeBinaryOperatorType.IdentityInequality// op
+                                        , new CodePrimitiveExpression(null)// right
+                                        )
+                                    )
+                                , new CodeExpressionStatement(// true
+                                    new CodeMethodInvokeExpression(
+                                        new CodeFieldReferenceExpression(
+                                            new CodeThisReferenceExpression()
+                                            , Generator_TableVarName
+                                            )
+                                            , "InitVars"
+                                        )
+                                    )
+                                )
+                            );
+                    }
+
+                    foreach (DataRelation rel in ds.Relations) {
+                        String Generator_RelationVarName = "" + rel.ExtendedProperties["Generator_RelationVarName"];
+                        String Generator_UserRelationName = "" + rel.ExtendedProperties["Generator_UserRelationName"];
+
+                        mem.Statements.Add(
+                            new CodeAssignStatement(
+                                new CodeFieldReferenceExpression(
+                                    new CodeThisReferenceExpression()
+                                    , Generator_RelationVarName
+                                    )
+                                , new CodeIndexerExpression(
+                                    new CodePropertyReferenceExpression(
+                                        new CodeThisReferenceExpression()
+                                        , "Relations"
+                                        )
+                                    , new CodePrimitiveExpression(Generator_UserRelationName)
+                                    )
+                                )
+                            );
+                    }
+                }
+
+                // InitClass
+                {
+                    var mem = new CodeMemberMethod();
+                    mem.Attributes = MemberAttributes.Private;
+                    mem.Name = "InitClass";
+                    dataSet1.Members.Add(mem);
+
+                    mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                        ));
+
+                    mem.Statements.Add(
+                        new CodeAssignStatement(
+                            new CodePropertyReferenceExpression(
+                                new CodeThisReferenceExpression()
+                                , "DataSetName"
+                                )
+                            , new CodePrimitiveExpression(Generator_DataSetName)
+                            )
+                        );
+                    mem.Statements.Add(
+                        new CodeAssignStatement(
+                            new CodePropertyReferenceExpression(
+                                new CodeThisReferenceExpression()
+                                , "Prefix"
+                                )
+                            , new CodePrimitiveExpression("")
+                            )
+                        );
+                    mem.Statements.Add(
+                        new CodeAssignStatement(
+                            new CodePropertyReferenceExpression(
+                                new CodeThisReferenceExpression()
+                                , "Namespace"
+                                )
+                            , new CodePrimitiveExpression(targetNamespace)
+                            )
+                        );
+                    mem.Statements.Add(
+                        new CodeAssignStatement(
+                            new CodePropertyReferenceExpression(
+                                new CodeThisReferenceExpression()
+                                , "EnforceConstraints"
+                                )
+                            , new CodePrimitiveExpression(true)
+                            )
+                        );
+                    mem.Statements.Add(
+                        new CodeAssignStatement(
+                            new CodePropertyReferenceExpression(
+                                new CodeThisReferenceExpression()
+                                , "SchemaSerializationMode"
+                                )
+                            , new CodeFieldReferenceExpression(
+                                new CodeTypeReferenceExpression(typeof(SchemaSerializationMode))
+                                , "IncludeSchema"
+                                )
+                            )
+                        );
+
+                    foreach (DataTable dt in ds.Tables) {
+                        String Generator_TableVarName = "" + dt.ExtendedProperties["Generator_TableVarName"];
+                        String Generator_TableClassName = "" + dt.ExtendedProperties["Generator_TableClassName"];
+
+                        mem.Statements.Add(
+                            new CodeAssignStatement(
+                                new CodeFieldReferenceExpression(
+                                    new CodeThisReferenceExpression()
+                                    , Generator_TableVarName
+                                    )
+                                , new CodeObjectCreateExpression(
+                                    Generator_TableClassName
+                                    )
+                                )
+                            );
+                        mem.Statements.Add(
+                            new CodeMethodInvokeExpression(
+                                new CodePropertyReferenceExpression(
+                                    new CodeBaseReferenceExpression()
+                                    , "Tables"
+                                    )
+                                , "Add"
+                                , new CodeFieldReferenceExpression(
+                                    new CodeThisReferenceExpression()
+                                    , Generator_TableVarName
+                                    )
+                                )
+                            );
+                    }
+
+                    foreach (DataRelation rel in ds.Relations) {
+                        String Generator_RelationVarName = "" + rel.ExtendedProperties["Generator_RelationVarName"];
+                        String Generator_UserRelationName = "" + rel.ExtendedProperties["Generator_UserRelationName"];
+
+                        var parentColumns = new CodeArrayCreateExpression(
+                            typeof(DataColumn)
+                            );
+
+                        var childColumns = new CodeArrayCreateExpression(
+                            typeof(DataColumn)
+                            );
+
+                        for (int w = 0; w < 2; w++) {
+                            foreach (DataColumn dc in ((w == 0) ? rel.ParentColumns : rel.ChildColumns)) {
+                                DataTable dt = dc.Table;
+                                String Generator_TableVarName = "" + dt.ExtendedProperties["Generator_TableVarName"];
+                                String Generator_ColumnPropNameInTable = "" + dc.ExtendedProperties["Generator_ColumnPropNameInTable"];
+
+                                ((w == 0) ? parentColumns : childColumns).Initializers.Add(
+                                    new CodePropertyReferenceExpression(
+                                        new CodeFieldReferenceExpression(
+                                            new CodeThisReferenceExpression()
+                                            , Generator_TableVarName
+                                            )
+                                        , Generator_ColumnPropNameInTable
+                                        )
+                                    );
+                            }
+                        }
+
+                        mem.Statements.Add(
+                            new CodeAssignStatement(
+                                new CodeFieldReferenceExpression(
+                                    new CodeThisReferenceExpression()
+                                    , Generator_RelationVarName
+                                    )
+                                , new CodeObjectCreateExpression(
+                                    typeof(DataRelation)
+                                    , new CodePrimitiveExpression(Generator_UserRelationName)
+                                    , parentColumns
+                                    , childColumns
+                                    , new CodePrimitiveExpression(false)
+                                    )
+                                )
+                            );
+
+                        mem.Statements.Add(
+                            new CodeExpressionStatement(
+                                new CodeMethodInvokeExpression(
+                                    new CodePropertyReferenceExpression(
+                                        new CodeThisReferenceExpression()
+                                        , "Relations"
+                                        )
+                                    , "Add"
+                                    , new CodeFieldReferenceExpression(
+                                        new CodeThisReferenceExpression()
+                                        , Generator_RelationVarName
+                                        )
+                                    )
+                                )
+                            );
+                    }
+                }
+
+                // ShouldSerialize???
+                {
+                    foreach (DataTable dt in ds.Tables) {
+                        String Generator_TableVarName = "" + dt.ExtendedProperties["Generator_TableVarName"];
+                        String Generator_TableClassName = "" + dt.ExtendedProperties["Generator_TableClassName"];
+                        String Generator_TablePropName = "" + dt.ExtendedProperties["Generator_TablePropName"];
+
+                        var mem = new CodeMemberMethod();
+                        mem.Attributes = MemberAttributes.Private | MemberAttributes.Final;
+                        mem.Name = "ShouldSerialize" + Generator_TablePropName;
+                        mem.ReturnType = new CodeTypeReference(typeof(bool));
+                        dataSet1.Members.Add(mem);
+
+                        mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                            new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                            ));
+
+                        mem.Statements.Add(
+                            new CodeMethodReturnStatement(
+                                new CodePrimitiveExpression(false)
+                                )
+                            );
+                    }
+                }
+
+                // SchemaChanged
+                {
+                    var mem = new CodeMemberMethod();
+                    mem.Attributes = MemberAttributes.Private | MemberAttributes.Final;
+                    mem.Name = "SchemaChanged";
+                    dataSet1.Members.Add(mem);
+
+                    mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                        new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                        ));
+
+                    mem.Parameters.Add(
+                        new CodeParameterDeclarationExpression(
+                            typeof(object)
+                            , "sender"
+                            )
+                        );
+                    mem.Parameters.Add(
+                        new CodeParameterDeclarationExpression(
+                            typeof(CollectionChangeEventArgs)
+                            , "e"
+                            )
+                        );
+
+                    mem.Statements.Add(
+                        new CodeConditionStatement(
+                            new CodeBinaryOperatorExpression(
+                                new CodePropertyReferenceExpression( // left
+                                    new CodeVariableReferenceExpression("e")
+                                    , "Action"
+                                    )
+                                , CodeBinaryOperatorType.ValueEquality // op
+                                , new CodeFieldReferenceExpression( // right
+                                    new CodeTypeReferenceExpression(
+                                        typeof(CollectionChangeAction)
+                                    )
+                                    , "Remove"
+                                    )
+                                )
+                            , new CodeExpressionStatement(
+                                new CodeMethodInvokeExpression( // true
+                                    new CodeThisReferenceExpression()
+                                    , "InitVars"
+                                    )
+                                )
+                            )
+                        );
+                }
+
+                // GetTypedDataSetSchema
+
+                // ???ChangeEventHandler
+                {
+                    foreach (DataTable dt in ds.Tables) {
+                        String Generator_RowEvHandlerName = "" + dt.ExtendedProperties["Generator_RowEvHandlerName"];
+                        String Generator_RowEvArgName = "" + dt.ExtendedProperties["Generator_RowEvArgName"];
+
+                        var mem = new CodeTypeDelegate();
+                        mem.Attributes = MemberAttributes.Public;
+                        mem.Name = Generator_RowEvHandlerName;
+                        mem.Parameters.Add(
+                            new CodeParameterDeclarationExpression(
+                                typeof(object)
+                                , "sender"
+                                )
+                            );
+                        mem.Parameters.Add(
+                            new CodeParameterDeclarationExpression(
+                                Generator_RowEvArgName
+                                , "e"
+                                )
+                            );
+
+                        dataSet1.Members.Add(mem);
+                    }
+                }
+
+                // ???DataTable
+                {
+                    foreach (DataTable dt in ds.Tables) {
+                        String Generator_TableClassName = "" + dt.ExtendedProperties["Generator_TableClassName"];
+                        String Generator_RowClassName = "" + dt.ExtendedProperties["Generator_RowClassName"];
+                        String Generator_TablePropName = "" + dt.ExtendedProperties["Generator_TablePropName"];
+
+                        String Generator_RowEvHandlerName = "" + dt.ExtendedProperties["Generator_RowEvHandlerName"];
+
+                        var cls = new CodeTypeDeclaration(Generator_TableClassName);
+                        cls.Attributes = MemberAttributes.Public;
+                        cls.IsPartial = true;
+                        cls.BaseTypes.Add(
+                            new CodeTypeReference(
+                                typeof(TypedTableBase<>).FullName
+                                , new CodeTypeReference(Generator_RowClassName)
+                                )
+                            );
+
+                        foreach (DataColumn dc in dt.Columns) {
+                            String Generator_ColumnVarNameInTable = "" + dc.ExtendedProperties["Generator_ColumnVarNameInTable"];
+
+                            cls.Members.Add(
+                                new CodeMemberField(
+                                    typeof(DataColumn)
+                                    , Generator_ColumnVarNameInTable
+                                    )
+                                );
+                        }
+
+                        // ctor
+                        {
+                            var mem = new CodeConstructor();
+                            mem.Attributes = MemberAttributes.Public | MemberAttributes.Final;
+
+                            mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                                new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                                ));
+
+                            mem.Statements.Add(
+                                new CodeAssignStatement(
+                                    new CodePropertyReferenceExpression(
+                                        new CodeThisReferenceExpression()
+                                        , "TableName"
+                                        )
+                                        , new CodePrimitiveExpression(Generator_TablePropName)
+                                    )
+                                );
+                            mem.Statements.Add(
+                                new CodeMethodInvokeExpression(
+                                    new CodeThisReferenceExpression()
+                                    , "BeginInit"
+                                    )
+                                );
+                            mem.Statements.Add(
+                                new CodeMethodInvokeExpression(
+                                    new CodeThisReferenceExpression()
+                                    , "InitClass"
+                                    )
+                                );
+                            mem.Statements.Add(
+                                new CodeMethodInvokeExpression(
+                                    new CodeThisReferenceExpression()
+                                    , "EndInit"
+                                    )
+                                );
+
+                            cls.Members.Add(mem);
+                        }
+
+                        // ctor(DataTable table)
+                        {
+                            var mem = new CodeConstructor();
+                            mem.Attributes = MemberAttributes.Family | MemberAttributes.Final;
+                            cls.Members.Add(mem);
+
+                            mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                                new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                                ));
+
+                            mem.Parameters.Add(
+                                new CodeParameterDeclarationExpression(
+                                    typeof(DataTable)
+                                    , "table"
+                                    )
+                                );
+
+                            mem.Statements.Add(
+                                new CodeAssignStatement(
+                                    new CodePropertyReferenceExpression(
+                                        new CodeThisReferenceExpression()
+                                        , "TableName"
+                                        )
+                                    , new CodePropertyReferenceExpression(
+                                        new CodeVariableReferenceExpression("table")
+                                        , "TableName"
+                                        )
+                                    )
+                                );
+
+                            mem.Statements.Add(
+                                new CodeConditionStatement(
+                                    new CodeBinaryOperatorExpression(
+                                        new CodePropertyReferenceExpression(
+                                            new CodeVariableReferenceExpression("table")
+                                            , "CaseSensitive"
+                                            )
+                                        , CodeBinaryOperatorType.IdentityInequality
+                                        , new CodePropertyReferenceExpression(
+                                            new CodePropertyReferenceExpression(
+                                                new CodeVariableReferenceExpression("table")
+                                                , "DataSet"
+                                                )
+                                            , "CaseSensitive"
+                                            )
+                                        )
+                                    , new CodeAssignStatement(
+                                        new CodePropertyReferenceExpression(
+                                            new CodeThisReferenceExpression()
+                                            , "CaseSensitive"
+                                            )
+                                        , new CodePropertyReferenceExpression(
+                                            new CodeVariableReferenceExpression("table")
+                                            , "CaseSensitive"
+                                            )
+                                        )
+                                    )
+                                );
+
+                            mem.Statements.Add(
+                                new CodeConditionStatement(
+                                    new CodeBinaryOperatorExpression(
+                                        new CodeMethodInvokeExpression(
+                                            new CodePropertyReferenceExpression(
+                                                new CodeVariableReferenceExpression("table")
+                                                , "Locale"
+                                                )
+                                            , "ToString"
+                                            )
+                                        , CodeBinaryOperatorType.IdentityInequality
+                                        , new CodeMethodInvokeExpression(
+                                            new CodePropertyReferenceExpression(
+                                                new CodePropertyReferenceExpression(
+                                                    new CodeVariableReferenceExpression("table")
+                                                    , "DataSet"
+                                                    )
+                                                , "Locale"
+                                                )
+                                            , "ToString"
+                                            )
+                                        )
+                                    , new CodeAssignStatement(
+                                        new CodePropertyReferenceExpression(
+                                            new CodeThisReferenceExpression()
+                                            , "Locale"
+                                            )
+                                        , new CodePropertyReferenceExpression(
+                                            new CodeVariableReferenceExpression("table")
+                                            , "Locale"
+                                            )
+                                        )
+                                    )
+                                );
+
+                            mem.Statements.Add(
+                                new CodeConditionStatement(
+                                    new CodeBinaryOperatorExpression(
+                                        new CodePropertyReferenceExpression(
+                                            new CodeVariableReferenceExpression("table")
+                                            , "Namespace"
+                                            )
+                                        , CodeBinaryOperatorType.IdentityInequality
+                                        , new CodePropertyReferenceExpression(
+                                            new CodePropertyReferenceExpression(
+                                                new CodeVariableReferenceExpression("table")
+                                                , "DataSet"
+                                                )
+                                            , "Namespace"
+                                            )
+                                        )
+                                    , new CodeAssignStatement(
+                                        new CodePropertyReferenceExpression(
+                                            new CodeThisReferenceExpression()
+                                            , "Namespace"
+                                            )
+                                        , new CodePropertyReferenceExpression(
+                                            new CodeVariableReferenceExpression("table")
+                                            , "Namespace"
+                                            )
+                                        )
+                                    )
+                                );
+
+                            mem.Statements.Add(
+                                new CodeAssignStatement(
+                                    new CodePropertyReferenceExpression(
+                                        new CodeThisReferenceExpression()
+                                        , "Prefix"
+                                        )
+                                    , new CodePropertyReferenceExpression(
+                                        new CodeVariableReferenceExpression("table")
+                                        , "Prefix"
+                                        )
+                                    )
+                                );
+                            mem.Statements.Add(
+                                new CodeAssignStatement(
+                                    new CodePropertyReferenceExpression(
+                                        new CodeThisReferenceExpression()
+                                        , "MinimumCapacity"
+                                        )
+                                    , new CodePropertyReferenceExpression(
+                                        new CodeVariableReferenceExpression("table")
+                                        , "MinimumCapacity"
+                                        )
+                                    )
+                                );
+
+                        }
+
+                        // ctor(SerializationInfo info, StreamingContext context)
+                        {
+                            var mem = new CodeConstructor();
+                            mem.Attributes = MemberAttributes.FamilyAndAssembly | MemberAttributes.Final;
+                            cls.Members.Add(mem);
+
+                            mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                                new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                                ));
+
+                            mem.Parameters.Add(
+                                new CodeParameterDeclarationExpression(
+                                    typeof(SerializationInfo)
+                                    , "info"
+                                    )
+                                );
+                            mem.Parameters.Add(
+                                new CodeParameterDeclarationExpression(
+                                    typeof(StreamingContext)
+                                    , "context"
+                                    )
+                                );
+
+                            mem.BaseConstructorArgs.Add(new CodeArgumentReferenceExpression("info"));
+                            mem.BaseConstructorArgs.Add(new CodeArgumentReferenceExpression("context"));
+
+                            mem.Statements.Add(
+                                new CodeMethodInvokeExpression(
+                                    new CodeThisReferenceExpression()
+                                    , "InitVars"
+                                    )
+                                );
+                        }
+
+                        // ???Column
+                        {
+                            foreach (DataColumn dc in dt.Columns) {
+                                String Generator_ColumnPropNameInTable = "" + dc.ExtendedProperties["Generator_ColumnPropNameInTable"];
+                                String Generator_ColumnVarNameInTable = "" + dc.ExtendedProperties["Generator_ColumnVarNameInTable"];
+
+                                var mem = new CodeMemberProperty();
+                                mem.Attributes = MemberAttributes.Public | MemberAttributes.Final;
+                                mem.Name = Generator_ColumnPropNameInTable;
+                                mem.Type = new CodeTypeReference(typeof(DataColumn));
+                                cls.Members.Add(mem);
+
+                                mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                                    new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                                    ));
+
+                                mem.GetStatements.Add(
+                                    new CodeMethodReturnStatement(
+                                        new CodeFieldReferenceExpression(
+                                            new CodeThisReferenceExpression()
+                                            , Generator_ColumnVarNameInTable
+                                            )
+                                        )
+                                    );
+                            }
+                        }
+
+                        // Count
+                        {
+                            var mem = new CodeMemberProperty();
+                            mem.Attributes = MemberAttributes.Public | MemberAttributes.Final;
+                            mem.Name = "Count";
+                            mem.Type = new CodeTypeReference(typeof(int));
+                            cls.Members.Add(mem);
+
+                            mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                                new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                                ));
+                            mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                                new CodeTypeReference(typeof(BrowsableAttribute))
+                                , new CodeAttributeArgument(
+                                    new CodePrimitiveExpression(false)
+                                    )
+                                ));
+
+                            mem.GetStatements.Add(
+                                new CodeMethodReturnStatement(
+                                    new CodePropertyReferenceExpression(
+                                        new CodePropertyReferenceExpression(
+                                            new CodeThisReferenceExpression()
+                                            , "Rows"
+                                            )
+                                        , "Count"
+                                        )
+                                    )
+                                );
+                        }
+
+
+                        // this[]
+                        {
+                            var mem = new CodeMemberProperty();
+                            mem.Attributes = MemberAttributes.Public | MemberAttributes.Final;
+                            mem.Name = "Item";
+                            mem.Type = new CodeTypeReference(Generator_RowClassName);
+                            cls.Members.Add(mem);
+
+                            mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                                new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                                ));
+
+                            mem.Parameters.Add(
+                                new CodeParameterDeclarationExpression(
+                                    typeof(int)
+                                    , "index"
+                                    )
+                                );
+
+                            mem.GetStatements.Add(
+                                new CodeMethodReturnStatement(
+                                    new CodeCastExpression(
+                                        Generator_RowClassName
+                                        , new CodeIndexerExpression(
+                                            new CodePropertyReferenceExpression(
+                                                new CodeThisReferenceExpression()
+                                                , "Rows"
+                                                )
+                                            , new CodeVariableReferenceExpression("index")
+                                            )
+                                        )
+                                    )
+                                );
+                        }
+
+                        // ???RowChanging
+                        // ???RowChanged
+                        // ???RowDeleting
+                        // ???RowDeleted
+                        {
+                            for (int w = 0; w < 4; w++) {
+                                var mem = new CodeMemberEvent();
+                                cls.Members.Add(mem);
+                                mem.Attributes = MemberAttributes.Public;
+                                if (false) { }
+                                else if (w == 0) mem.Name = "" + dt.ExtendedProperties["Generator_RowChangingName"];
+                                else if (w == 1) mem.Name = "" + dt.ExtendedProperties["Generator_RowChangedName"];
+                                else if (w == 2) mem.Name = "" + dt.ExtendedProperties["Generator_RowDeletingName"];
+                                else if (w == 3) mem.Name = "" + dt.ExtendedProperties["Generator_RowDeletedName"];
+
+                                mem.Type = new CodeTypeReference(Generator_RowEvHandlerName);
+                            }
+                        }
+
+                        // Add???Row
+                        {
+                            var mem = new CodeMemberMethod();
+                            mem.Attributes = MemberAttributes.Public | MemberAttributes.Final;
+                            mem.Name = String.Format("Add{0}", Generator_RowClassName);
+                            cls.Members.Add(mem);
+
+                            mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                                new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                                ));
+
+                            mem.Parameters.Add(
+                                new CodeParameterDeclarationExpression(
+                                    Generator_RowClassName
+                                    , "row"
+                                    )
+                                );
+
+                            mem.Statements.Add(
+                                new CodeMethodInvokeExpression(
+                                    new CodePropertyReferenceExpression(
+                                        new CodeThisReferenceExpression()
+                                        , "Rows"
+                                        )
+                                    , "Add"
+                                    , new CodeVariableReferenceExpression("row")
+                                    )
+                                );
+                        }
+
+                        // Add???Row
+                        {
+                            var mem = new CodeMemberMethod();
+                            mem.Attributes = MemberAttributes.Public | MemberAttributes.Final;
+                            mem.Name = String.Format("Add{0}", Generator_RowClassName);
+                            mem.ReturnType = new CodeTypeReference(Generator_RowClassName);
+                            cls.Members.Add(mem);
+
+                            mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                                new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                                ));
+
+                            mem.Statements.Add(
+                                new CodeVariableDeclarationStatement(
+                                    Generator_RowClassName
+                                    , "row"
+                                    , new CodeCastExpression(
+                                        Generator_RowClassName
+                                        , new CodeMethodInvokeExpression(
+                                            new CodeThisReferenceExpression()
+                                            , "NewRow"
+                                            )
+                                        )
+                                    )
+                                );
+
+                            CodeArrayCreateExpression vals;
+
+                            mem.Statements.Add(
+                                new CodeVariableDeclarationStatement(
+                                    typeof(object[])
+                                    , "values"
+                                    , vals = new CodeArrayCreateExpression(
+                                        typeof(object)
+                                        )
+                                    )
+                                );
+
+                            mem.Statements.Add(
+                                new CodeAssignStatement(
+                                    new CodePropertyReferenceExpression(
+                                        new CodeVariableReferenceExpression("row")
+                                        , "ItemArray"
+                                        )
+                                    , new CodeVariableReferenceExpression("values")
+                                    )
+                                );
+
+                            mem.Statements.Add(
+                                new CodeMethodInvokeExpression(
+                                    new CodePropertyReferenceExpression(
+                                        new CodeThisReferenceExpression()
+                                        , "Rows"
+                                        )
+                                    , "Add"
+                                    , new CodeVariableReferenceExpression("row")
+                                    )
+                                );
+
+                            mem.Statements.Add(
+                                new CodeMethodReturnStatement(
+                                    new CodeVariableReferenceExpression("row")
+                                    )
+                                );
+
+                            foreach (DataColumn dc in dt.Columns) {
+                                String Generator_ColumnPropNameInRow = "" + dc.ExtendedProperties["Generator_ColumnPropNameInRow"];
+                                String Generator_ColumnVarNameInTable = "" + dc.ExtendedProperties["Generator_ColumnVarNameInTable"];
+                                bool isNullable = dc.AllowDBNull;
+                                bool isValueType = dc.DataType.IsValueType;
+                                bool autoIncrement = dc.AutoIncrement;
+                                var colTy = isValueType && isNullable
+                                    ? new CodeTypeReference(typeof(Nullable<>).FullName, new CodeTypeReference(dc.DataType))
+                                    : new CodeTypeReference(dc.DataType)
+                                    ;
+
+                                if (!autoIncrement) {
+                                    mem.Parameters.Add(
+                                        new CodeParameterDeclarationExpression(
+                                            colTy
+                                            , Generator_ColumnPropNameInRow
+                                            )
+                                        );
+
+                                    vals.Initializers.Add(
+                                        new CodeVariableReferenceExpression(Generator_ColumnPropNameInRow)
+                                        );
+                                }
+                                else {
+                                    vals.Initializers.Add(
+                                        new CodePrimitiveExpression(null)
+                                        );
+                                }
+                            }
+                        }
+
+                        // FindBy???
+                        if (dt.PrimaryKey != null && dt.PrimaryKey.Length != 0) {
+                            DataColumn[] pks = dt.PrimaryKey;
+
+                            var mem = new CodeMemberMethod();
+                            mem.Attributes = MemberAttributes.Public | MemberAttributes.Final;
+                            mem.Name = String.Format("FindBy{0}", String.Join("_", pks.Select(p => "" + p.ExtendedProperties["Generator_ColumnPropNameInRow"]).ToArray()));
+                            mem.ReturnType = new CodeTypeReference(Generator_RowClassName);
+                            cls.Members.Add(mem);
+
+                            mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                                new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                                ));
+
+                            CodeArrayCreateExpression ce = new CodeArrayCreateExpression(
+                                typeof(object)
+                                );
+
+                            foreach (DataColumn dc in pks) {
+                                mem.Parameters.Add(
+                                    new CodeParameterDeclarationExpression(
+                                        dc.DataType
+                                        , "" + dc.ExtendedProperties["Generator_ColumnPropNameInRow"]
+                                        )
+                                    );
+
+                                ce.Initializers.Add(
+                                    new CodeVariableReferenceExpression(
+                                        "" + dc.ExtendedProperties["Generator_ColumnPropNameInRow"]
+                                        )
+                                    );
+                            }
+
+                            mem.Statements.Add(
+                                new CodeMethodReturnStatement(
+                                    new CodeCastExpression(
+                                        mem.ReturnType
+                                        , new CodeMethodInvokeExpression(
+                                            new CodePropertyReferenceExpression(
+                                                new CodeThisReferenceExpression()
+                                                , "Rows"
+                                                )
+                                            , "Find"
+                                            , ce
+                                            )
+                                        )
+                                    )
+                                );
+                        }
+
+                        // Clone
+                        {
+                            var mem = new CodeMemberMethod();
+                            mem.Attributes = MemberAttributes.Public | MemberAttributes.Override;
+                            mem.Name = "Clone";
+                            mem.ReturnType = new CodeTypeReference(typeof(DataTable));
+                            cls.Members.Add(mem);
+
+                            mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                                new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                                ));
+
+                            mem.Statements.Add(
+                                new CodeVariableDeclarationStatement(
+                                    Generator_TableClassName
+                                    , "cln"
+                                    , new CodeCastExpression(
+                                        Generator_TableClassName
+                                        , new CodeMethodInvokeExpression(
+                                            new CodeBaseReferenceExpression()
+                                            , "Clone"
+                                            )
+                                        )
+                                    )
+                                );
+                            mem.Statements.Add(
+                                new CodeMethodInvokeExpression(
+                                    new CodeVariableReferenceExpression("cln")
+                                    , "InitVars"
+                                    )
+                                );
+                            mem.Statements.Add(
+                                new CodeMethodReturnStatement(
+                                    new CodeVariableReferenceExpression("cln")
+                                    )
+                                );
+                        }
+
+                        // CreateInstance
+                        {
+                            var mem = new CodeMemberMethod();
+                            mem.Attributes = MemberAttributes.Family | MemberAttributes.Override;
+                            mem.Name = "CreateInstance";
+                            mem.ReturnType = new CodeTypeReference(typeof(DataTable));
+                            cls.Members.Add(mem);
+
+                            mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                                new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                                ));
+
+                            mem.Statements.Add(
+                                new CodeMethodReturnStatement(
+                                    new CodeObjectCreateExpression(
+                                        Generator_TableClassName
+                                        )
+                                    )
+                                );
+                        }
+
+                        // InitVars
+                        {
+                            var mem = new CodeMemberMethod();
+                            mem.Attributes = MemberAttributes.FamilyAndAssembly;
+                            mem.Name = "InitVars";
+                            cls.Members.Add(mem);
+
+                            mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                                new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                                ));
+
+                            foreach (DataColumn dc in dt.Columns) {
+                                String Generator_ColumnVarNameInTable = "" + dc.ExtendedProperties["Generator_ColumnVarNameInTable"];
+
+                                mem.Statements.Add(
+                                    new CodeAssignStatement(
+                                        new CodeFieldReferenceExpression(
+                                            new CodeThisReferenceExpression()
+                                            , Generator_ColumnVarNameInTable
+                                            )
+                                        , new CodeIndexerExpression(
+                                            new CodePropertyReferenceExpression(
+                                                new CodeBaseReferenceExpression()
+                                                , "Columns"
+                                                )
+                                            , new CodePrimitiveExpression(dc.ColumnName)
+                                            )
+                                        )
+                                    );
+                            }
+                        }
+
+                        // InitClass
+                        {
+                            var mem = new CodeMemberMethod();
+                            mem.Attributes = MemberAttributes.Private | MemberAttributes.Final;
+                            mem.Name = "InitClass";
+                            cls.Members.Add(mem);
+
+                            mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                                new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                                ));
+
+                            foreach (DataColumn dc in dt.Columns) {
+                                String Generator_ColumnVarNameInTable = "" + dc.ExtendedProperties["Generator_ColumnVarNameInTable"];
+                                String Generator_UserColumnName = "" + dc.ExtendedProperties["Generator_UserColumnName"];
+
+                                mem.Statements.Add(
+                                    new CodeAssignStatement(
+                                        new CodeFieldReferenceExpression(
+                                            new CodeThisReferenceExpression()
+                                            , Generator_ColumnVarNameInTable
+                                            )
+                                        , new CodeObjectCreateExpression(
+                                            typeof(DataColumn)
+                                            , new CodePrimitiveExpression(dc.ColumnName)
+                                            , new CodeTypeOfExpression(dc.DataType)
+                                            , new CodePrimitiveExpression(dc.Expression)
+                                            , GUt.GenVal(dc.ColumnMapping)
+                                            )
+                                        )
+                                    );
+
+                                foreach (Object k in dc.ExtendedProperties.Keys) {
+                                    Object v = dc.ExtendedProperties[k];
+                                    mem.Statements.Add(
+                                        new CodeMethodInvokeExpression(
+                                            new CodePropertyReferenceExpression(
+                                                new CodeFieldReferenceExpression(
+                                                    new CodeThisReferenceExpression()
+                                                    , Generator_ColumnVarNameInTable
+                                                    )
+                                                , "ExtendedProperties"
+                                                )
+                                            , "Add"
+                                            , new CodePrimitiveExpression(k)
+                                            , new CodePrimitiveExpression(v)
+                                            )
+                                        );
+
+                                }
+
+                                mem.Statements.Add(
+                                    new CodeMethodInvokeExpression(
+                                        new CodePropertyReferenceExpression(
+                                            new CodeBaseReferenceExpression()
+                                            , "Columns"
+                                            )
+                                        , "Add"
+                                        , new CodeFieldReferenceExpression(
+                                            new CodeThisReferenceExpression()
+                                            , Generator_ColumnVarNameInTable
+                                            )
+                                        )
+                                    );
+
+                            }
+
+                            foreach (System.Data.UniqueConstraint dco in dt.Constraints) {
+                                var cols = dco.Columns.Select(p => new CodeFieldReferenceExpression(
+                                    new CodeThisReferenceExpression()
+                                    , "" + p.ExtendedProperties["Generator_ColumnVarNameInTable"]
+                                    )
+                                );
+
+                                mem.Statements.Add(
+                                    new CodeMethodInvokeExpression(
+                                        new CodePropertyReferenceExpression(
+                                            new CodeThisReferenceExpression()
+                                            , "Constraints"
+                                            )
+                                        , "Add"
+                                        , new CodeObjectCreateExpression(
+                                            typeof(System.Data.UniqueConstraint)
+                                            , new CodePrimitiveExpression(dco.ConstraintName)
+                                            , new CodeArrayCreateExpression(
+                                                typeof(DataColumn)
+                                                , cols.ToArray()
+                                                )
+                                            )
+                                        )
+                                    );
+                            }
+
+                            foreach (DataColumn dc in dt.Columns) {
+                                DiffUt d = new DiffUt();
+                                d.Add(dc.AutoIncrement, "AutoIncrement", false);
+                                d.Add(dc.AutoIncrementSeed, "AutoIncrementSeed", 0L);
+                                d.Add(dc.AutoIncrementStep, "AutoIncrementStep", 1L);
+                                d.Add(dc.AllowDBNull, "AllowDBNull", true);
+                                d.Add(dc.Caption, "Caption", dc.ColumnName);
+                                d.Add(dc.ColumnMapping, "ColumnMapping", MappingType.Element);
+                                d.Add(dc.DateTimeMode, "DateTimeMode", DataSetDateTime.UnspecifiedLocal);
+                                d.Add(dc.DefaultValue, "DefaultValue", DBNull.Value);
+                                d.Add(dc.Expression, "Expression", "");
+                                d.Add(dc.MaxLength, "MaxLength", -1);
+                                d.Add(dc.Namespace, "Namespace", dc.Namespace);
+                                d.Add(dc.Prefix, "Prefix", "");
+                                d.Add(dc.ReadOnly, "ReadOnly", false);
+
+                                foreach (var kv in d.Items) {
+                                    mem.Statements.Add(
+                                        new CodeAssignStatement(
+                                            new CodePropertyReferenceExpression(
+                                                new CodeFieldReferenceExpression(
+                                                    new CodeThisReferenceExpression()
+                                                    , "" + dc.ExtendedProperties["Generator_ColumnVarNameInTable"]
+                                                    )
+                                                , kv.Key
+                                                )
+                                            , GUt.GenVal(kv.Value)
+                                            )
+                                        );
+                                }
+                            }
+                        }
+
+                        // New?Row
+                        {
+                            var mem = new CodeMemberMethod();
+                            mem.Attributes = MemberAttributes.Public | MemberAttributes.Final;
+                            mem.Name = String.Format("New{0}Row", dt.ExtendedProperties["Generator_TablePropName"]);
+                            mem.ReturnType = new CodeTypeReference("" + dt.ExtendedProperties["Generator_RowClassName"]);
+                            cls.Members.Add(mem);
+
+                            mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                                new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                                ));
+
+                            mem.Statements.Add(
+                                new CodeMethodReturnStatement(
+                                    new CodeCastExpression(
+                                        mem.ReturnType
+                                        , new CodeMethodInvokeExpression(
+                                            new CodeThisReferenceExpression()
+                                            , "NewRow"
+                                            )
+                                        )
+                                    )
+                                );
+                        }
+
+                        // NewRowFromBuilder
+                        {
+                            var mem = new CodeMemberMethod();
+                            mem.Attributes = MemberAttributes.Family | MemberAttributes.Override;
+                            mem.Name = "NewRowFromBuilder";
+                            mem.ReturnType = new CodeTypeReference(typeof(DataRow));
+                            cls.Members.Add(mem);
+
+                            mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                                new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                                ));
+
+                            mem.Parameters.Add(
+                                new CodeParameterDeclarationExpression(
+                                    typeof(DataRowBuilder)
+                                    , "builder"
+                                    )
+                                );
+
+                            mem.Statements.Add(
+                                new CodeMethodReturnStatement(
+                                    new CodeObjectCreateExpression(
+                                        new CodeTypeReference("" + dt.ExtendedProperties["Generator_RowClassName"])
+                                        , new CodeVariableReferenceExpression("builder")
+                                        )
+                                    )
+                                );
+                        }
+
+                        // GetRowType
+                        {
+                            var mem = new CodeMemberMethod();
+                            mem.Attributes = MemberAttributes.Family | MemberAttributes.Override;
+                            mem.Name = "GetRowType";
+                            mem.ReturnType = new CodeTypeReference(typeof(Type));
+                            cls.Members.Add(mem);
+
+                            mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                                new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                                ));
+
+                            mem.Statements.Add(
+                                new CodeMethodReturnStatement(
+                                    new CodeTypeOfExpression(
+                                        new CodeTypeReference("" + dt.ExtendedProperties["Generator_RowClassName"])
+                                        )
+                                    )
+                                );
+                        }
+
+                        // OnRowChanged
+                        // OnRowChanging
+                        // OnRowDeleted
+                        // OnRowDeleting
+                        {
+                            for (int w = 0; w < 4; w++) {
+                                var mem = new CodeMemberMethod();
+                                mem.Attributes = MemberAttributes.Family | MemberAttributes.Override;
+                                if (false) { }
+                                else if (w == 0) mem.Name = "OnRowChanged";
+                                else if (w == 1) mem.Name = "OnRowChanging";
+                                else if (w == 2) mem.Name = "OnRowDeleted";
+                                else if (w == 3) mem.Name = "OnRowDeleting";
+                                cls.Members.Add(mem);
+
+                                mem.CustomAttributes.Add(new CodeAttributeDeclaration(
+                                    new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                                    ));
+
+                                mem.Parameters.Add(
+                                    new CodeParameterDeclarationExpression(
+                                        typeof(DataRowChangeEventArgs)
+                                        , "e"
+                                        )
+                                    );
+
+                                String evName = null;
+                                if (false) { }
+                                else if (w == 0) evName = "" + dt.ExtendedProperties["Generator_RowChangedName"];
+                                else if (w == 1) evName = "" + dt.ExtendedProperties["Generator_RowChangingName"];
+                                else if (w == 2) evName = "" + dt.ExtendedProperties["Generator_RowDeletedName"];
+                                else if (w == 3) evName = "" + dt.ExtendedProperties["Generator_RowDeletingName"];
+
+                                mem.Statements.Add(
+                                    new CodeMethodInvokeExpression(
+                                        new CodeBaseReferenceExpression()
+                                        , mem.Name
+                                        , new CodeVariableReferenceExpression("e")
+                                        )
+                                    );
+
+                                mem.Statements.Add(
+                                    new CodeConditionStatement(
+                                        new CodeBinaryOperatorExpression(
+                                            new CodeEventReferenceExpression( //left
+                                                new CodeThisReferenceExpression()
+                                                , evName
+                                                )
+                                            , CodeBinaryOperatorType.IdentityInequality // op
+                                            , new CodePrimitiveExpression(null) // right
+                                            )
+                                        , new CodeExpressionStatement( // true
+                                            new CodeMethodInvokeExpression(
+                                                new CodeThisReferenceExpression()
+                                                , evName
+                                                , new CodeThisReferenceExpression()
+                                                , new CodeObjectCreateExpression(
+                                                    "" + dt.ExtendedProperties["Generator_RowEvArgName"]
+                                                    , new CodeCastExpression(
+                                                        new CodeTypeReference("" + dt.ExtendedProperties["Generator_RowClassName"])
+                                                        , new CodePropertyReferenceExpression(
+                                                            new CodeVariableReferenceExpression("e")
+                                                            , "Row"
+                                                            )
+                                                        )
+                                                    , new CodePropertyReferenceExpression(
+                                                        new CodeVariableReferenceExpression("e")
+                                                        , "Action"
+                                                        )
+                                                    )
+                                                )
+                                            )
+                                        )
+                                    );
+                            }
+                        }
+
+                        dataSet1.Members.Add(cls);
+                    }
+                }
+            }
+
+            {
+                CodeCompileUnit codeCompileUnit = new CodeCompileUnit();
+                codeCompileUnit.Namespaces.Add(csns);
+
+                var codeProvider = new Microsoft.CSharp.CSharpCodeProvider();
+                var codeGeneratorOptions = new CodeGeneratorOptions();
+                using (StreamWriter wr = new StreamWriter(fpcs, false)) {
+                    codeProvider.GenerateCodeFromCompileUnit(codeCompileUnit, wr, codeGeneratorOptions);
+                }
+            }
+        }
+
+
+        class DiffUt {
+            public DiffUt() {
+
+            }
+
+            public void Add(Object val, String name, Object defval) {
+                if (val == null && defval == null) {
+                    return;
+                }
+                else if (val == null || defval == null) {
+
+                }
+                else if (defval.Equals(val)) {
+                    return;
+                }
+
+                _Items.Add(name, val);
+            }
+
+            Dictionary<string, object> _Items = new Dictionary<string, object>();
+
+            public IDictionary<string, object> Items { get { return new Dictionary<string, object>(_Items); } }
+        }
+
+        class GUt {
+            internal static void Assign1(CodeStatementCollection stmts, Type ty, Object val, String name, Object defval) {
+                if (val == null && defval == null) {
+                    return;
+                }
+                else if (val == null || defval == null) {
+
+                }
+                else if (defval.Equals(val)) {
+                    return;
+                }
+
+                stmts.Add(
+                    new CodeAssignStatement(
+                        new CodePropertyReferenceExpression(
+                            new CodeThisReferenceExpression()
+                            , name
+                            )
+                        , GenVal(val)
+                        )
+                    );
+            }
+
+            internal static CodeExpression GenVal(Object val) {
+                if (val is Enum) {
+                    Enum e = (Enum)val;
+                    return new CodeFieldReferenceExpression(
+                        new CodeTypeReferenceExpression(e.GetType())
+                        , e.ToString("G")
+                        );
+                }
+                if (val is DBNull) {
+                    return new CodeFieldReferenceExpression(
+                        new CodeTypeReferenceExpression(typeof(DBNull))
+                        , "Value"
+                        );
+                }
+                return new CodePrimitiveExpression(val);
             }
         }
     }
