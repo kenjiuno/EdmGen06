@@ -3079,6 +3079,194 @@ namespace EdmGen06 {
                             }
                         }
 
+                        // GetTypedTableSchema
+                        {
+                            var mem = new CodeMemberMethod();
+                            mem.Attributes = MemberAttributes.Family | MemberAttributes.Override;
+                            mem.Name = "GetTypedTableSchema";
+                            mem.ReturnType = new CodeTypeReference(typeof(XmlSchemaComplexType));
+                            cls.Members.Add(mem);
+
+                            mem.CustomAttributes.Add(
+                                new CodeAttributeDeclaration(
+                                    new CodeTypeReference(typeof(DebuggerNonUserCodeAttribute))
+                                    )
+                                );
+
+                            mem.Parameters.Add(
+                                new CodeParameterDeclarationExpression(
+                                    typeof(XmlSchemaSet)
+                                    , "xs"
+                                    )
+                                );
+
+                            mem.Statements.Add(
+                                new CodeVariableDeclarationStatement(
+                                    typeof(XmlSchemaComplexType)
+                                    , "type"
+                                    , new CodeObjectCreateExpression(
+                                        typeof(XmlSchemaComplexType)
+                                        )
+                                    )
+                                );
+                            mem.Statements.Add(
+                                new CodeVariableDeclarationStatement(
+                                    typeof(XmlSchemaSequence)
+                                    , "sequence"
+                                    , new CodeObjectCreateExpression(
+                                        typeof(XmlSchemaSequence)
+                                        )
+                                    )
+                                );
+                            mem.Statements.Add(
+                                new CodeVariableDeclarationStatement(
+                                    "" + ds.ExtendedProperties["Generator_DataSetName"]
+                                    , "ds"
+                                    , new CodeObjectCreateExpression(
+                                        "" + ds.ExtendedProperties["Generator_DataSetName"]
+                                        )
+                                    )
+                                );
+                            mem.Statements.Add(
+                                new CodeVariableDeclarationStatement(
+                                    typeof(XmlSchemaAny)
+                                    , "any1"
+                                    , new CodeObjectCreateExpression(
+                                        typeof(XmlSchemaAny)
+                                        )
+                                    )
+                                );
+                            mem.Statements.Add(
+                                new CodeAssignStatement(
+                                    new CodePropertyReferenceExpression(
+                                        new CodeVariableReferenceExpression("any1")
+                                        , "Namespace"
+                                        )
+                                    , new CodePrimitiveExpression("http://www.w3.org/2001/XMLSchema")
+                                    )
+                                );
+                            mem.Statements.Add(
+                                new CodeAssignStatement(
+                                    new CodePropertyReferenceExpression(
+                                        new CodeVariableReferenceExpression("any1")
+                                        , "MinOccurs"
+                                        )
+                                    , new CodePrimitiveExpression(0)
+                                    )
+                                );
+                            mem.Statements.Add(
+                                new CodeAssignStatement(
+                                    new CodePropertyReferenceExpression(
+                                        new CodeVariableReferenceExpression("any1")
+                                        , "MaxOccurs"
+                                        )
+                                    , new CodeFieldReferenceExpression(
+                                        new CodeTypeReferenceExpression(typeof(decimal))
+                                        , "MaxValue"
+                                        )
+                                    )
+                                );
+                            mem.Statements.Add(
+                                new CodeAssignStatement(
+                                    new CodePropertyReferenceExpression(
+                                        new CodeVariableReferenceExpression("any1")
+                                        , "ProcessContents"
+                                        )
+                                    , GUt.GenVal(XmlSchemaContentProcessing.Lax)
+                                    )
+                                );
+                            mem.Statements.Add(
+                                new CodeMethodInvokeExpression(
+                                    new CodePropertyReferenceExpression(
+                                        new CodeVariableReferenceExpression("sequence")
+                                        , "Items"
+                                        )
+                                    , "Add"
+                                    , new CodeVariableReferenceExpression("any1")
+                                    )
+                                );
+
+                            mem.Statements.Add(
+                                new CodeVariableDeclarationStatement(
+                                    typeof(XmlSchemaAny)
+                                    , "any2"
+                                    , new CodeObjectCreateExpression(
+                                        typeof(XmlSchemaAny)
+                                        )
+                                    )
+                                );
+                            mem.Statements.Add(
+                                new CodeAssignStatement(
+                                    new CodePropertyReferenceExpression(
+                                        new CodeVariableReferenceExpression("any2")
+                                        , "Namespace"
+                                        )
+                                    , new CodePrimitiveExpression("urn:schemas-microsoft-com:xml-diffgram-v1")
+                                    )
+                                );
+                            mem.Statements.Add(
+                                new CodeAssignStatement(
+                                    new CodePropertyReferenceExpression(
+                                        new CodeVariableReferenceExpression("any2")
+                                        , "MinOccurs"
+                                        )
+                                    , new CodePrimitiveExpression(1)
+                                    )
+                                );
+                            mem.Statements.Add(
+                                new CodeAssignStatement(
+                                    new CodePropertyReferenceExpression(
+                                        new CodeVariableReferenceExpression("any2")
+                                        , "ProcessContents"
+                                        )
+                                    , GUt.GenVal(XmlSchemaContentProcessing.Lax)
+                                    )
+                                );
+                            mem.Statements.Add(
+                                new CodeMethodInvokeExpression(
+                                    new CodePropertyReferenceExpression(
+                                        new CodeVariableReferenceExpression("sequence")
+                                        , "Items"
+                                        )
+                                    , "Add"
+                                    , new CodeVariableReferenceExpression("any2")
+                                    )
+                                );
+
+                            mem.Statements.Add(
+                                new CodeVariableDeclarationStatement(
+                                    typeof(XmlSchemaAttribute)
+                                    , "attribute1"
+                                    , new CodeObjectCreateExpression(
+                                        typeof(XmlSchemaAttribute)
+                                        )
+                                    )
+                                );
+                            mem.Statements.Add(
+                                new CodeAssignStatement(
+                                    new CodePropertyReferenceExpression(
+                                        new CodeVariableReferenceExpression("attribute1")
+                                        , "Name"
+                                        )
+                                    , new CodePrimitiveExpression("namespace")
+                                    )
+                                );
+                            mem.Statements.Add(
+                                new CodeAssignStatement(
+                                    new CodePropertyReferenceExpression(
+                                        new CodeVariableReferenceExpression("attribute1")
+                                        , "FixedValue"
+                                        )
+                                    , new CodePropertyReferenceExpression(
+                                        new CodeVariableReferenceExpression("ds")
+                                        , "Namespace"
+                                        )
+                                    )
+                                );
+
+
+                        }
+
                         dataSet1.Members.Add(cls);
                     }
                 }
