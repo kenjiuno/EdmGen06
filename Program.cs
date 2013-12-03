@@ -129,7 +129,7 @@ namespace EdmGen06 {
             else if (yver == new Version(3, 0)) { xEDMX = "{" + NS.EDMXv3 + "}"; xSSDL = "{" + NS.SSDLv3 + "}"; xCSDL = "{" + NS.CSDLv3 + "}"; xMSL = "{" + NS.MSLv3 + "}"; trace.TraceEvent(TraceEventType.Information, 101, "ModelGen v3"); }
             else throw new NotSupportedException(String.Format("Version '{0}', from 1.0 3.0 ", yver));
 
-            trace.TraceEvent(TraceEventType.Information, 101, "Getting System.Data.Common.DbProviderFactory from '{0}'", providerName);
+            trace.TraceEvent(TraceEventType.Information, 101, "Getting {1} from '{0}'", providerName, typeof(DbProviderFactory).FullName);
             var fac = System.Data.Common.DbProviderFactories.GetFactory(providerName);
             if (fac == null) throw new ApplicationException();
             trace.TraceEvent(TraceEventType.Information, 101, fac.GetType().AssemblyQualifiedName);
@@ -142,7 +142,7 @@ namespace EdmGen06 {
                 db.Open();
                 trace.TraceEvent(TraceEventType.Information, 101, "Connected");
 
-                trace.TraceEvent(TraceEventType.Information, 101, "Getting System.Data.Entity.Core.Common.DbProviderServices from '{0}'", providerName);
+                trace.TraceEvent(TraceEventType.Information, 101, "Getting {1} from '{0}'", providerName, typeof(DbProviderServices).FullName);
                 var providerServices = ((IServiceProvider)fac).GetService(typeof(DbProviderServices)) as DbProviderServices;
                 if (providerServices == null) providerServices = DbProviderServices.GetProviderServices(db);
                 trace.TraceEvent(TraceEventType.Information, 101, providerServices.GetType().AssemblyQualifiedName);
