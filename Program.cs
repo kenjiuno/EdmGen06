@@ -5,7 +5,6 @@ using System.Data.Entity.Core.Objects;
 using System.Data.Entity.Core.Objects.DataClasses;
 using System.Data.Entity.Core.EntityClient;
 #else
-using System.Data.Common;
 using System.Data.Metadata.Edm;
 using System.Data.Objects;
 using System.Data.Objects.DataClasses;
@@ -16,6 +15,7 @@ using EdmGen06.Properties;
 using System;
 using System.Collections.Generic;
 using System.Data;
+using System.Data.Common;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
@@ -31,6 +31,7 @@ using System.ComponentModel;
 using System.Xml.Serialization;
 using System.Xml.Schema;
 using System.Runtime.Serialization;
+using System.Reflection;
 
 namespace EdmGen06 {
     class Program {
@@ -42,6 +43,17 @@ namespace EdmGen06 {
                     args[3],
                     args[4],
                     (args.Length > 5) ? new Version(args[5]) : new Version("3.0")
+                    );
+                return;
+            }
+            if (args.Length >= 6 && args[0] == "/EFModelGen") {
+                new Program().ModelGen2(
+                    args[1],
+                    args[2],
+                    args[3],
+                    args[4],
+                    args[5],
+                    (args.Length > 6) ? new Version(args[6]) : new Version("3.0")
                     );
                 return;
             }
@@ -116,6 +128,10 @@ namespace EdmGen06 {
         TraceSource trace = new TraceSource(APP, SourceLevels.All);
 
         public void ModelGen(String connectionString, String providerName, String modelName, String targetSchema, Version yver) {
+            ModelGen2(connectionString, providerName, null, modelName, targetSchema, yver);
+        }
+
+        public void ModelGen2(String connectionString, String providerName, String typeProviderServices, String modelName, String targetSchema, Version yver) {
             String baseDir = Environment.CurrentDirectory;
 
             String fpssdl3 = Path.Combine(baseDir, modelName + ".ssdl");
@@ -143,8 +159,22 @@ namespace EdmGen06 {
                 trace.TraceEvent(TraceEventType.Information, 101, "Connected");
 
                 trace.TraceEvent(TraceEventType.Information, 101, "Getting System.Data.Entity.Core.Common.DbProviderServices from '{0}'", providerName);
-                var providerServices = ((IServiceProvider)fac).GetService(typeof(DbProviderServices)) as DbProviderServices;
-                if (providerServices == null) providerServices = DbProviderServices.GetProviderServices(db);
+                DbProviderServices providerServices = null;
+                if (providerServices == null) {
+                    if (typeProviderServices != null) {
+                        var ty = Type.GetType(typeProviderServices);
+                        if (ty != null) providerServices = (DbProviderServices)ty.InvokeMember("Instance", BindingFlags.Public | BindingFlags.Static | BindingFlags.GetProperty, null, null, new object[0]);
+                        if (providerServices != null) trace.TraceEvent(TraceEventType.Information, 101, " from Instance property");
+                    }
+                }
+                if (providerServices == null) {
+                    providerServices = ((IServiceProvider)fac).GetService(typeof(DbProviderServices)) as DbProviderServices;
+                    if (providerServices != null) trace.TraceEvent(TraceEventType.Information, 101, " from IServiceProvider.GetService method");
+                }
+                if (providerServices == null) {
+                    providerServices = DbProviderServices.GetProviderServices(db);
+                    if (providerServices != null) trace.TraceEvent(TraceEventType.Information, 101, " from DbProviderServices.GetProviderServices method");
+                }
                 trace.TraceEvent(TraceEventType.Information, 101, providerServices.GetType().AssemblyQualifiedName);
                 trace.TraceEvent(TraceEventType.Information, 101, "Ok");
 
