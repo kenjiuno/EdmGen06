@@ -1,5 +1,6 @@
 ﻿EdmGen06
- /ModelGen <connectionString> <providerName> <modelName> <targetSchema> <ver>
+ /ModelGen   <connectionString> <providerName> <modelName> <targetSchema> <ver>
+ /EFModelGen <connectionString> <providerName> <DbProviderServices> <modelName> <targetSchema> <ver>
  /DataSet <connectionString> <providerName> <modelName> <targetSchema>
  /DataSet.cs <DataSet1.xsd> <DataSet1.cs>
 
@@ -19,6 +20,17 @@ EdmGen06 ^
   /ModelGen ^
   "Port=5432;Encoding=UTF-8;Server=xxxxx;Database=xxxxx;UserId=xxxxx;Password=xxxxx;Preload Reader=true;" ^
   "Npgsql" ^
+  "DBName" ^
+  "public" ^
+  "3.0"
+
+rem [KU.NpgsqlEF6 Example]
+
+EdmGen06 ^
+  /EFModelGen ^
+  "Port=5432;Encoding=UTF-8;Server=xxxxx;Database=xxxxx;UserId=xxxxx;Password=xxxxx;Preload Reader=true;" ^
+  "Npgsql" ^
+  "NpgsqlEF6.NpgsqlServices, NpgsqlEF6, Version=2.0.12.91, Culture=neutral, PublicKeyToken=da0cf53beacd9ab5" ^
   "DBName" ^
   "public" ^
   "3.0"
