@@ -149,8 +149,8 @@ namespace EdmGen06 {
             var fac = System.Data.Common.DbProviderFactories.GetFactory(providerName);
             if (fac == null) throw new ApplicationException();
             trace.TraceEvent(TraceEventType.Information, 101, fac.GetType().AssemblyQualifiedName);
+            trace.TraceEvent(TraceEventType.Information, 101, fac.GetType().Assembly.CodeBase);
             trace.TraceEvent(TraceEventType.Information, 101, "Ok");
-
 
             using (var db = fac.CreateConnection()) {
                 trace.TraceEvent(TraceEventType.Information, 101, "Connecting");
@@ -167,15 +167,18 @@ namespace EdmGen06 {
                         if (providerServices != null) trace.TraceEvent(TraceEventType.Information, 101, " from Instance property");
                     }
                 }
+#if !ENTITIES6
                 if (providerServices == null) {
                     providerServices = ((IServiceProvider)fac).GetService(typeof(DbProviderServices)) as DbProviderServices;
                     if (providerServices != null) trace.TraceEvent(TraceEventType.Information, 101, " from IServiceProvider.GetService method");
                 }
+#endif
                 if (providerServices == null) {
                     providerServices = DbProviderServices.GetProviderServices(db);
                     if (providerServices != null) trace.TraceEvent(TraceEventType.Information, 101, " from DbProviderServices.GetProviderServices method");
                 }
                 trace.TraceEvent(TraceEventType.Information, 101, providerServices.GetType().AssemblyQualifiedName);
+                trace.TraceEvent(TraceEventType.Information, 101, providerServices.GetType().Assembly.CodeBase);
                 trace.TraceEvent(TraceEventType.Information, 101, "Ok");
 
                 trace.TraceEvent(TraceEventType.Information, 101, "Get ProviderManifestToken");
