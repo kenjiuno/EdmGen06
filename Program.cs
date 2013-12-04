@@ -152,6 +152,8 @@ namespace EdmGen06 {
             trace.TraceEvent(TraceEventType.Information, 101, fac.GetType().Assembly.CodeBase);
             trace.TraceEvent(TraceEventType.Information, 101, "Ok");
 
+            Type tyEFv6 = null;
+
             using (var db = fac.CreateConnection()) {
                 trace.TraceEvent(TraceEventType.Information, 101, "Connecting");
                 db.ConnectionString = connectionString;
@@ -180,6 +182,8 @@ namespace EdmGen06 {
                 trace.TraceEvent(TraceEventType.Information, 101, providerServices.GetType().AssemblyQualifiedName);
                 trace.TraceEvent(TraceEventType.Information, 101, providerServices.GetType().Assembly.CodeBase);
                 trace.TraceEvent(TraceEventType.Information, 101, "Ok");
+
+                tyEFv6 = providerServices.GetType();
 
                 trace.TraceEvent(TraceEventType.Information, 101, "Get ProviderManifestToken");
                 var providerManifestToken = providerServices.GetProviderManifestToken(db);
@@ -569,8 +573,43 @@ namespace EdmGen06 {
                 {
                     XDocument xAppconfig = new XDocument(
                         new XElement("configuration"
+                            , new XComment("configSections has to be FIRST element!")
+                            , new XElement("configSections"
+                                , new XComment("for EF6.0.x ")
+                                , new XComment("you don't need this. your nuget will setup automatically")
+                                , new XElement("section"
+                                    , new XAttribute("name", "entityFramework")
+                                    , new XAttribute("type", "System.Data.Entity.Internal.ConfigFile.EntityFrameworkSection, EntityFramework, Version=6.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089")
+                                    , new XAttribute("requirePermission", "false")
+                                    )
+                                )
+                            , new XElement("system.data"
+                                , new XElement("DbProviderFactories"
+                                , new XComment("for EF4.x and EF6.0.x ")
+                                , new XComment("you may need this. if you don't modify machine.config")
+                                    , new XElement("remove"
+                                        , new XAttribute("invariant", providerName)
+                                        )
+                                    , new XElement("add"
+                                        , new XAttribute("name", fac.GetType().Assembly.CustomAttributes
+                                            .Where(p => p.AttributeType == typeof(AssemblyTitleAttribute))
+                                            .SelectMany(p => p.ConstructorArguments)
+                                            .Select(p => "" + p.Value)
+                                            .FirstOrDefault()
+                                            )
+                                        , new XAttribute("invariant", providerName)
+                                        , new XAttribute("description", fac.GetType().Assembly.CustomAttributes
+                                            .Where(p => p.AttributeType == typeof(AssemblyDescriptionAttribute))
+                                            .SelectMany(p => p.ConstructorArguments)
+                                            .Select(p => "" + p.Value)
+                                            .FirstOrDefault()
+                                            )
+                                        , new XAttribute("type", fac.GetType().AssemblyQualifiedName)
+                                        )
+                                    )
+                                )
                             , new XElement("connectionStrings"
-                                , new XComment("for EF4.x (NET4.0/NET4.5)")
+                                , new XComment("for EF4.x and EF6.0.x ")
                                 , new XElement("add"
                                     , new XAttribute("name", String.Format("{0}Entities", modelName))
                                     , new XAttribute("connectionString", String.Format("metadata={0}.csdl|{0}.ssdl|{0}.msl;provider={1};provider connection string=\"{2}\""
@@ -579,6 +618,16 @@ namespace EdmGen06 {
                                         , connectionString // UUt.UrlEncode("\"" + connectionString + "\"")
                                         ))
                                     , new XAttribute("providerName", "System.Data.EntityClient")
+                                    )
+                                )
+                            , new XElement("entityFramework"
+                                , new XElement("providers"
+                                    , new XComment("for EF6.0.x ")
+                                    , new XComment("you need this. add it manually")
+                                    , new XElement("provider"
+                                        , new XAttribute("invariantName", providerName)
+                                        , new XAttribute("type", tyEFv6.AssemblyQualifiedName)
+                                        )
                                     )
                                 )
                             )
