@@ -255,6 +255,7 @@ namespace EdmGen06 {
                         XElement csdlKey = null;
                         bool hasKey = false; // http://social.msdn.microsoft.com/Forums/en-US/94c227d3-3764-45b2-8c6b-e45b6cc8e169/keyless-object-workaround
                         bool hasId = dbt.Columns.Any(p => p.IsIdentity || p.Constraints.OfType<PrimaryKeyConstraint>().Any());
+                        if (!dbt.Columns.IsLoaded) dbt.Columns.Load();
                         foreach (var dbc in dbt.Columns) {
                             trace.TraceEvent(TraceEventType.Information, 101, " TableColumn: {0}", dbc.Name);
 
@@ -381,6 +382,7 @@ namespace EdmGen06 {
                         var csdlReferentialConstraint = new XElement(xCSDL + "ReferentialConstraint"
                             );
 
+                        if (!dbco.ForeignKeys.IsLoaded) dbco.ForeignKeys.Load();
                         foreach (var dbfk in dbco.ForeignKeys) {
                             Addfkc(csdlSchema, dbfk, dbfk.ToColumn, dbfk.FromColumn, false, dbfk.FromColumn.IsNullable ? "0..1" : "1"
                                 , ssdlAssociationSet, ssdlAssociation, ssdlReferentialConstraint, csdlAssociationSet, csdlAssociation, csdlReferentialConstraint);
@@ -433,6 +435,7 @@ namespace EdmGen06 {
                             }
                             ssdlSchema.Add(ssdlFunction);
 
+                            if (!dbr.Parameters.IsLoaded) dbr.Parameters.Load();
                             foreach (var dbfp in dbr.Parameters) {
                                 trace.TraceEvent(TraceEventType.Information, 101, " Parameter: {0}", dbfp.Name);
 
