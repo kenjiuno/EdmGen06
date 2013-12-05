@@ -81,7 +81,18 @@ namespace EdmGen06.Properties {
         }
         
         /// <summary>
-        ///    に類似しているローカライズされた文字列を検索します。
+        ///   EdmGen06
+        /// /ModelGen   &lt;connectionString&gt; &lt;providerName&gt; &lt;modelName&gt; &lt;targetSchema&gt; &lt;ver&gt;
+        /// /EFModelGen &lt;connectionString&gt; &lt;providerName&gt; &lt;DbProviderServices&gt; &lt;modelName&gt; &lt;targetSchema&gt; &lt;ver&gt;
+        /// /DataSet &lt;connectionString&gt; &lt;providerName&gt; &lt;modelName&gt; &lt;targetSchema&gt;
+        /// /DataSet.cs &lt;DataSet1.xsd&gt; &lt;DataSet1.cs&gt;
+        ///
+        ///rem [SqlServer Example]
+        ///
+        ///EdmGen06 ^
+        ///  /ModelGen ^
+        ///  &quot;Data Source=xxxxx;Initial Catalog=xxxxx;Persist Security Info=True;User ID=xxxxx;Password=xxxxx;MultipleActiveResultSets=true;&quot; ^
+        ///  &quot;System.Data [残りの文字列は切り詰められました]&quot;; に類似しているローカライズされた文字列を検索します。
         /// </summary>
         internal static string Usage {
             get {
