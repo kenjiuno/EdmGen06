@@ -207,6 +207,9 @@ namespace EdmGen06 {
                     mslMapping.Add(mslEntityContainerMapping);
 
                     var vecTableOrView = Context.Tables.Cast<TableOrView>().Union(Context.Views.Cast<TableOrView>());
+
+                    nut.localTypes = vecTableOrView.Select(p => p.Name).ToArray();
+
                     foreach (var dbt in vecTableOrView) {
                         trace.TraceEvent(TraceEventType.Information, 101, "{2}: {0}.{1}", dbt.SchemaName, dbt.Name, (dbt is Table) ? "Table" : "View");
 
@@ -427,13 +430,31 @@ namespace EdmGen06 {
                                 if (dbf.IsBuiltIn.HasValue) ssdlFunction.SetAttributeValue("BuiltIn", dbf.IsBuiltIn.Value ? "true" : "false");
                                 if (dbf.IsNiladic.HasValue) ssdlFunction.SetAttributeValue("NiladicFunction", dbf.IsNiladic.Value ? "true" : "false");
                             }
+                            bool deleteMe = false;
                             var dbsf = dbr as ScalarFunction;
                             if (dbsf != null) {
                                 if (dbsf.IsAggregate.HasValue) ssdlFunction.SetAttributeValue("Aggregate", dbsf.IsAggregate.Value ? "true" : "false");
                                 //if (dbsf.ReturnType != null) ssdlFunction.SetAttributeValue("ReturnType", nut.SsdlPropType(dbsf.ReturnType));
-                                if (dbsf.ReturnType != null) csdlFunctionImport.SetAttributeValue("ReturnType", nut.CsdlPropCollType(dbsf.ReturnType));
+                                if (dbsf.ReturnType != null) {
+                                    String ty = nut.CsdlPropCollType(dbsf.ReturnType);
+                                    if (ty != null) {
+                                        csdlFunctionImport.SetAttributeValue("ReturnType", ty);
+                                    }
+                                    else {
+                                        deleteMe = true;
+                                    }
+                                }
                             }
                             ssdlSchema.Add(ssdlFunction);
+
+                            if (deleteMe) {
+                                ssdlFunction.AddAfterSelf(new XComment(String.Format("Function {0} removed. Unknown ReturnType {1}"
+                                    , ssdlFunction.Attribute("Name")
+                                    , (dbsf != null && dbsf.ReturnType != null) ? dbsf.ReturnType.TypeName : "")
+                                    ));
+
+                                ssdlFunction.Remove();
+                            }
 
                             if (!dbr.Parameters.IsLoaded) dbr.Parameters.Load();
                             foreach (var dbfp in dbr.Parameters) {
@@ -605,6 +626,7 @@ namespace EdmGen06 {
             public DbProviderManifest providerManifest { get; set; }
             public String modelName { get; set; }
             public String targetSchema { get; set; }
+            public String[] localTypes=new String[0];
 
             public String SsdlNs() { return String.Format("{0}", targetSchema); }
             public String SsdlContainer() { return String.Format("{0}StoreContainer", modelName); }
@@ -646,6 +668,8 @@ namespace EdmGen06 {
                         }
                     }
                 }
+                if (Array.IndexOf<String>(localTypes, ts.TypeName) >= 0)
+                    return ts.TypeName;
                 // Unknown type
                 return null;
             }
@@ -707,7 +731,9 @@ namespace EdmGen06 {
             }
 
             public String CsdlPropCollType(TypeSpecification ts) {
-                return String.Format("Collection({0})", CsdlPropType(ts));
+                String ty = CsdlPropType(ts);
+                if (ty == null) return null;
+                return String.Format("Collection({0})", ty);
             }
 
             public String CsdlParameterMode(Parameter dbfp) {
