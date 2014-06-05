@@ -322,9 +322,9 @@ namespace EdmGen06 {
                             }
 
                             if (deleteMe) {
-                                ssdlProperty.AddAfterSelf(new XComment(String.Format("Property {0} removed. Unknown type.", ssdlProperty.Attribute("Name"))));
-                                csdlProperty.AddAfterSelf(new XComment(String.Format("Property {0} removed. Unknown type.", csdlProperty.Attribute("Name"))));
-                                mslScalarProperty.AddAfterSelf(new XComment(String.Format("ScalarProperty {0} removed. Unknown type.", mslScalarProperty.Attribute("Name"))));
+                                ssdlProperty.AddAfterSelf(new XComment(String.Format("Property {0} removed. Unknown type {1}.", ssdlProperty.Attribute("Name"), dbc.ColumnType.TypeName)));
+                                csdlProperty.AddAfterSelf(new XComment(String.Format("Property {0} removed. Unknown type {1}.", csdlProperty.Attribute("Name"), dbc.ColumnType.TypeName)));
+                                mslScalarProperty.AddAfterSelf(new XComment(String.Format("ScalarProperty {0} removed. Unknown type {1}.", mslScalarProperty.Attribute("Name"), dbc.ColumnType.TypeName)));
 
                                 ssdlProperty.Remove();
                                 csdlProperty.Remove();
@@ -454,6 +454,8 @@ namespace EdmGen06 {
                                     ));
 
                                 ssdlFunction.Remove();
+                                csdlFunctionImport.Remove();
+                                mslFunctionImportMapping.Remove();
                             }
 
                             if (!dbr.Parameters.IsLoaded) dbr.Parameters.Load();
@@ -461,6 +463,19 @@ namespace EdmGen06 {
                                 trace.TraceEvent(TraceEventType.Information, 101, " Parameter: {0}", dbfp.Name);
 
                                 // ssdl
+
+                                if (nut.SsdlPropType(dbfp.ParameterType) == null) {
+                                    ssdlFunction.AddAfterSelf(new XComment(String.Format("Function {0} removed. Unknown ParameterType {1}"
+                                        , ssdlFunction.Attribute("Name")
+                                        , dbfp.ParameterType.TypeName)
+                                        ));
+
+                                    ssdlFunction.Remove();
+                                    csdlFunctionImport.Remove();
+                                    mslFunctionImportMapping.Remove();
+                                    break;
+                                }
+
                                 var ssdlParameter = new XElement(xSSDL + "Parameter"
                                     , new XAttribute("Name", nut.SsdlParameterName(dbfp))
                                     , new XAttribute("Mode", nut.SsdlParameterMode(dbfp))
@@ -469,6 +484,19 @@ namespace EdmGen06 {
                                 ssdlFunction.Add(ssdlParameter);
 
                                 // csdl
+
+                                if (nut.CsdlPropType(dbfp.ParameterType) == null) {
+                                    ssdlFunction.AddAfterSelf(new XComment(String.Format("Function {0} removed. Unknown ParameterType {1}"
+                                        , ssdlFunction.Attribute("Name")
+                                        , dbfp.ParameterType.TypeName)
+                                        ));
+
+                                    ssdlFunction.Remove();
+                                    csdlFunctionImport.Remove();
+                                    mslFunctionImportMapping.Remove();
+                                    break;
+                                }
+
                                 var csdlParameter = new XElement(xCSDL + "Parameter"
                                     , new XAttribute("Name", nut.CsdlParameterName(dbfp))
                                     , new XAttribute("Mode", nut.CsdlParameterMode(dbfp))
@@ -626,7 +654,7 @@ namespace EdmGen06 {
             public DbProviderManifest providerManifest { get; set; }
             public String modelName { get; set; }
             public String targetSchema { get; set; }
-            public String[] localTypes=new String[0];
+            public String[] localTypes = new String[0];
 
             public String SsdlNs() { return String.Format("{0}", targetSchema); }
             public String SsdlContainer() { return String.Format("{0}StoreContainer", modelName); }
