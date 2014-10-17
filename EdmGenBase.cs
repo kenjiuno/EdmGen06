@@ -67,6 +67,6 @@ namespace EdmGen06 {
 
         }
 
-        protected TraceSource trace = new TraceSource("EdmGen06", SourceLevels.All);
+        protected TraceSource trace = new TraceSource("EdmGen06", SourceLevels.Verbose);
     }
 }

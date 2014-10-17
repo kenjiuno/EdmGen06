@@ -584,7 +584,19 @@ namespace EdmGen06 {
         private void Addfkc(XElement csdlSchema, ForeignKey dbfk, Column dbfkc, Column dbfkc2, bool isMulti, String multiplicity
             , XElement ssdlAssociationSet, XElement ssdlAssociation, XElement ssdlReferentialConstraint
             , XElement csdlAssociationSet, XElement csdlAssociation, XElement csdlReferentialConstraint
-            ) {
+        ) {
+            trace.TraceEvent(TraceEventType.Verbose, 101, "Addfkc: ");
+            trace.TraceEvent(TraceEventType.Verbose, 101, "  xSSDL -> {0}", xSSDL);
+            trace.TraceEvent(TraceEventType.Verbose, 101, "  nut -> {0}", nut);
+            trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfk -> {0}", dbfk);
+            trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfkc              -> {0}", dbfkc);
+            trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfkc.Parent       -> {0}", dbfkc.Parent);
+            trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfkc.Parent.Id    -> {0}", dbfkc.Parent.Id);
+            trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfkc.Parent.Name  -> {0}", dbfkc.Parent.Name);
+            trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfkc2             -> {0}", dbfkc2);
+            trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfkc2.Parent      -> {0}", dbfkc2.Parent);
+            trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfkc2.Parent.Id   -> {0}", dbfkc2.Parent.Id);
+            trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfkc2.Parent.Name -> {0}", dbfkc2.Parent.Name);
 
             // ssdl
             var ssdlasEnd = new XElement(xSSDL + "End"
