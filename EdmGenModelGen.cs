@@ -16,6 +16,7 @@ using System.Reflection;
 using System.Text.RegularExpressions;
 using System.Xml;
 using System.Xml.Linq;
+using System.Collections.Generic;
 
 namespace EdmGen06 {
     public class EdmGenModelGen : EdmGenBase {
@@ -157,14 +158,37 @@ namespace EdmGen06 {
 
                 XElement mssdl, mcsdl, mmsl;
                 XDocument mEdmx = new XDocument(); // XDocument: ModelGen edmx
-                mEdmx.Add(new XElement(xEDMX + "Edmx",
-                    new XAttribute("Version", yver.ToString(2)),
-                    new XElement(xEDMX + "Runtime",
-                        mssdl = new XElement(xEDMX + "StorageModels"),
-                        mcsdl = new XElement(xEDMX + "ConceptualModels"),
-                        mmsl = new XElement(xEDMX + "Mappings")
+                mEdmx.Add(
+                    new XElement(xEDMX + "Edmx",
+                        new XAttribute("Version", yver.ToString(2)),
+                        new XElement(xEDMX + "Runtime",
+                            mssdl = new XElement(xEDMX + "StorageModels"),
+                            mcsdl = new XElement(xEDMX + "ConceptualModels"),
+                            mmsl = new XElement(xEDMX + "Mappings")
+                            ),
+                        new XElement(xEDMX + "Designer",
+                            new XElement(xEDMX + "Connection"
+                                ),
+                            new XElement(xEDMX + "Options",
+                                new XElement(xEDMX + "DesignerInfoPropertySet",
+                                    new XElement(xEDMX + "DesignerProperty",
+                                        new XAttribute("Name", "EnablePluralization"),
+                                        new XAttribute("Value", "False")
+                                        ),
+                                    new XElement(xEDMX + "DesignerProperty",
+                                        new XAttribute("Name", "IncludeForeignKeysInModel"),
+                                        new XAttribute("Value", "True")
+                                        ),
+                                    new XElement(xEDMX + "DesignerProperty",
+                                        new XAttribute("Name", "UseLegacyProvider"),
+                                        new XAttribute("Value", "True")
+                                        )
+                                    )
+                                ),
+                            new XElement(xEDMX + "Diagrams"
+                                )
+                            )
                         )
-                    )
                 );
 
                 trace.TraceEvent(TraceEventType.Information, 101, "Getting SchemaInformation");
@@ -206,14 +230,39 @@ namespace EdmGen06 {
                         );
                     mslMapping.Add(mslEntityContainerMapping);
 
-                    var vecTableOrView = Context.Tables.Cast<TableOrView>().Union(Context.Views.Cast<TableOrView>());
+                    var allTableOrView = Context.Tables.Cast<TableOrView>().Union(Context.Views.Cast<TableOrView>()).ToArray();
 
-                    nut.localTypes = vecTableOrView.Select(p => p.Name).ToArray();
+                    nut.localTypes = allTableOrView.Select(p => p.Name).ToArray();
 
-                    foreach (var dbt in vecTableOrView) {
+                    List<TableOrView> processTableOrView = allTableOrView.Where(dbt => dbt.SchemaName == targetSchema).ToList();
+
+                    while (true) {
+                        bool more = false;
+                        foreach (var dbco in Context.TableConstraints.OfType<ForeignKeyConstraint>()) {
+                            dbco.ForeignKeys.Load();
+                            foreach (var dbfk in dbco.ForeignKeys) {
+                                dbfk.FromColumnReference.Load();
+                                dbfk.FromColumn.ParentReference.Load();
+
+                                {
+                                    var dbt = dbfk.FromColumn.Parent;
+                                    if (!processTableOrView.Contains(dbt) && allTableOrView.Contains(dbt)) { processTableOrView.Add(dbt); more |= true; }
+                                }
+
+                                dbfk.ToColumnReference.Load();
+                                dbfk.ToColumn.ParentReference.Load();
+
+                                {
+                                    var dbt = dbfk.ToColumn.Parent;
+                                    if (!processTableOrView.Contains(dbt) && allTableOrView.Contains(dbt)) { processTableOrView.Add(dbt); more |= true; }
+                                }
+                            }
+                        }
+                        if (!more) break;
+                    }
+
+                    foreach (var dbt in processTableOrView) {
                         trace.TraceEvent(TraceEventType.Information, 101, "{2}: {0}.{1}", dbt.SchemaName, dbt.Name, (dbt is Table) ? "Table" : "View");
-
-                        if (dbt.SchemaName != targetSchema) continue;
 
                         XElement ssdlEntitySet = new XElement(xSSDL + "EntitySet"
                             , new XAttribute("Name", nut.SsdlEntitySet(dbt))
@@ -258,11 +307,12 @@ namespace EdmGen06 {
                         XElement csdlKey = null;
                         bool hasKey = false; // http://social.msdn.microsoft.com/Forums/en-US/94c227d3-3764-45b2-8c6b-e45b6cc8e169/keyless-object-workaround
                         bool hasId = dbt.Columns.Any(p => p.IsIdentity || p.Constraints.OfType<PrimaryKeyConstraint>().Any());
-                        if (!dbt.Columns.IsLoaded) dbt.Columns.Load();
+                        dbt.Columns.Load();
                         foreach (var dbc in dbt.Columns) {
                             trace.TraceEvent(TraceEventType.Information, 101, " TableColumn: {0}", dbc.Name);
 
                             bool isIdGen = dbc.IsIdentity;
+                            dbc.Constraints.Load();
                             bool isId = isIdGen || dbc.Constraints.OfType<PrimaryKeyConstraint>().Any() || (hasId ? false : !dbc.IsNullable);
 
                             String ssdlName;
@@ -353,8 +403,6 @@ namespace EdmGen06 {
                     foreach (var dbco in Context.TableConstraints.OfType<ForeignKeyConstraint>()) {
                         trace.TraceEvent(TraceEventType.Information, 101, "Constraint: {0}", dbco.Name);
 
-                        if (dbco.Parent.SchemaName != targetSchema) continue;
-
                         // ssdl
                         var ssdlAssociationSet = new XElement(xSSDL + "AssociationSet"
                             , new XAttribute("Name", nut.SsdlAssociationSet(dbco))
@@ -385,11 +433,33 @@ namespace EdmGen06 {
                         var csdlReferentialConstraint = new XElement(xCSDL + "ReferentialConstraint"
                             );
 
-                        if (!dbco.ForeignKeys.IsLoaded) dbco.ForeignKeys.Load();
+                        dbco.ForeignKeys.Load();
+
                         foreach (var dbfk in dbco.ForeignKeys) {
+                            dbfk.FromColumnReference.Load();
+                            dbfk.FromColumn.ParentReference.Load();
+                            dbfk.FromColumn.Constraints.Load();
+                            dbfk.ToColumnReference.Load();
+                            dbfk.ToColumn.ParentReference.Load();
+                            dbfk.ToColumn.Constraints.Load();
+
+                            int pkcFrom = 0;
+                            foreach (var dbpk in dbfk.FromColumn.Constraints.OfType<PrimaryKeyConstraint>()) {
+                                dbpk.Columns.Load();
+                                pkcFrom = dbpk.Columns.Count;
+                                break;
+                            }
+                            int pkcTo = 0;
+                            foreach (var dbpk in dbfk.ToColumn.Constraints.OfType<PrimaryKeyConstraint>()) {
+                                dbpk.Columns.Load();
+                                pkcTo = dbpk.Columns.Count;
+                                break;
+                            }
+                            bool same = (pkcFrom == dbco.ForeignKeys.Count && dbco.ForeignKeys.Count == pkcTo);
+
                             Addfkc(csdlSchema, dbfk, dbfk.ToColumn, dbfk.FromColumn, false, dbfk.FromColumn.IsNullable ? "0..1" : "1"
                                 , ssdlAssociationSet, ssdlAssociation, ssdlReferentialConstraint, csdlAssociationSet, csdlAssociation, csdlReferentialConstraint);
-                            Addfkc(csdlSchema, dbfk, dbfk.FromColumn, dbfk.ToColumn, true, "*"
+                            Addfkc(csdlSchema, dbfk, dbfk.FromColumn, dbfk.ToColumn, true, same ? "0..1" : "*"
                                 , ssdlAssociationSet, ssdlAssociation, ssdlReferentialConstraint, csdlAssociationSet, csdlAssociation, csdlReferentialConstraint);
                         }
 
@@ -581,6 +651,26 @@ namespace EdmGen06 {
             }
         }
 
+        XElement Once(XElement parent, XElement newc) {
+            foreach (XElement curc in parent.Elements()) {
+                if (Strify(curc).Equals(Strify(newc)))
+                    return curc;
+            }
+
+            parent.Add(newc);
+            return newc;
+        }
+
+        String Strify(XElement e1) {
+            StringWriter wr = new StringWriter();
+            wr.WriteLine(e1.Name);
+            foreach (XAttribute att in e1.Attributes().OrderBy(p => "" + p.Name)) {
+                wr.WriteLine(att.Name);
+                wr.WriteLine(att.Value);
+            }
+            return wr.ToString();
+        }
+
         private void Addfkc(XElement csdlSchema, ForeignKey dbfk, Column dbfkc, Column dbfkc2, bool isMulti, String multiplicity
             , XElement ssdlAssociationSet, XElement ssdlAssociation, XElement ssdlReferentialConstraint
             , XElement csdlAssociationSet, XElement csdlAssociation, XElement csdlReferentialConstraint
@@ -603,48 +693,48 @@ namespace EdmGen06 {
                 , new XAttribute("Role", nut.SsdlEntitySet(dbfkc.Parent))
                 , new XAttribute("EntitySet", nut.SsdlEntitySet(dbfkc.Parent))
                 );
-            ssdlAssociationSet.Add(ssdlasEnd);
+            ssdlasEnd = Once(ssdlAssociationSet, ssdlasEnd);
 
             var ssdlaEnd = new XElement(xSSDL + "End"
                 , new XAttribute("Role", nut.SsdlEntitySet(dbfkc.Parent))
                 , new XAttribute("Type", nut.SsdlEntityTypeRef(dbfkc.Parent))
                 , new XAttribute("Multiplicity", multiplicity)
                 );
-            ssdlAssociation.Add(ssdlaEnd);
+            ssdlaEnd = Once(ssdlAssociation, ssdlaEnd);
 
             var ssdlarc = new XElement(xSSDL + (isMulti ? "Dependent" : "Principal")
                 , new XAttribute("Role", nut.SsdlEntitySet(dbfkc.Parent))
                 );
-            ssdlReferentialConstraint.Add(ssdlarc);
+            ssdlarc = Once(ssdlReferentialConstraint, ssdlarc);
 
             var ssdlPropertyRef = new XElement(xSSDL + "PropertyRef"
                 , new XAttribute("Name", nut.SsdlProp(dbfkc))
                 );
-            ssdlarc.Add(ssdlPropertyRef);
+            ssdlPropertyRef = Once(ssdlarc, ssdlPropertyRef);
 
             // csdl
             var csdlasEnd = new XElement(xCSDL + "End"
                 , new XAttribute("Role", nut.CsdlEntitySet(dbfkc.Parent))
                 , new XAttribute("EntitySet", nut.CsdlEntitySet(dbfkc.Parent))
                 );
-            csdlAssociationSet.Add(csdlasEnd);
+            csdlasEnd = Once(csdlAssociationSet, csdlasEnd);
 
             var csdlaEnd = new XElement(xCSDL + "End"
                 , new XAttribute("Role", nut.CsdlEntitySet(dbfkc.Parent))
                 , new XAttribute("Type", nut.CsdlEntityTypeRef(dbfkc.Parent))
                 , new XAttribute("Multiplicity", multiplicity)
                 );
-            csdlAssociation.Add(csdlaEnd);
+            csdlaEnd = Once(csdlAssociation, csdlaEnd);
 
             var csdlarc = new XElement(xCSDL + (isMulti ? "Dependent" : "Principal")
                 , new XAttribute("Role", nut.CsdlEntitySet(dbfkc.Parent))
                 );
-            csdlReferentialConstraint.Add(csdlarc);
+            csdlarc = Once(csdlReferentialConstraint, csdlarc);
 
             var csdlPropertyRef = new XElement(xCSDL + "PropertyRef"
                 , new XAttribute("Name", nut.CsdlProp(dbfkc))
                 );
-            csdlarc.Add(csdlPropertyRef);
+            csdlPropertyRef = Once(csdlarc, csdlPropertyRef);
 
             var csdlNavigationProperty = new XElement(xCSDL + "NavigationProperty"
                 , new XAttribute("Name", nut.CsdlEntityType(dbfkc.Parent))
@@ -656,7 +746,7 @@ namespace EdmGen06 {
                 .Where(p => p.Attribute("Name").Value == nut.CsdlEntityType(dbfkc2.Parent))
                 .FirstOrDefault();
             if (csdlEntityType != null) {
-                csdlEntityType.Add(csdlNavigationProperty);
+                csdlNavigationProperty = Once(csdlEntityType, csdlNavigationProperty);
             }
         }
 
@@ -670,8 +760,8 @@ namespace EdmGen06 {
 
             public String SsdlNs() { return String.Format("{0}", targetSchema); }
             public String SsdlContainer() { return String.Format("{0}StoreContainer", modelName); }
-            public String SsdlEntitySet(TableOrView dbt) { return dbt.Name; }
-            public String SsdlEntityType(TableOrView dbt) { return String.Format("{0}", dbt.Name); }
+            public String SsdlEntitySet(TableOrView dbt) { return String.Format("{1}", dbt.SchemaName, dbt.Name); }
+            public String SsdlEntityType(TableOrView dbt) { return String.Format("{0}_{1}", dbt.SchemaName, dbt.Name); }
             public String SsdlEntityTypeRef(TableOrView dbt) { return String.Format("{0}.{1}", SsdlNs(), SsdlEntityType(dbt)); }
 
             public String SsdlProp(Column dbc) { return dbc.Name; }
