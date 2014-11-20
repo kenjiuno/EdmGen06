@@ -230,6 +230,42 @@ namespace EdmGen06 {
                         );
                     mslMapping.Add(mslEntityContainerMapping);
 
+                    trace.TraceEvent(TraceEventType.Information, 101, "Loading all Tables");
+                    trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.Tables.ToArray().Length));
+
+                    trace.TraceEvent(TraceEventType.Information, 101, "Loading all TableForeignKeys");
+                    trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.TableForeignKeys.ToArray().Length));
+
+                    trace.TraceEvent(TraceEventType.Information, 101, "Loading all TableColumns");
+                    trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.TableColumns.ToArray().Length));
+
+                    trace.TraceEvent(TraceEventType.Information, 101, "Loading all TableConstraints");
+                    trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.TableConstraints.ToArray().Length));
+
+                    trace.TraceEvent(TraceEventType.Information, 101, "Loading all Views");
+                    trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.Views.ToArray().Length));
+
+                    trace.TraceEvent(TraceEventType.Information, 101, "Loading all ViewForeignKeys");
+                    trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.ViewForeignKeys.ToArray().Length));
+
+                    trace.TraceEvent(TraceEventType.Information, 101, "Loading all ViewColumns");
+                    trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.ViewColumns.ToArray().Length));
+
+                    trace.TraceEvent(TraceEventType.Information, 101, "Loading all ViewConstraints");
+                    trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.ViewConstraints.ToArray().Length));
+
+                    trace.TraceEvent(TraceEventType.Information, 101, "Loading all Functions");
+                    trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.Functions.ToArray().Length));
+
+                    trace.TraceEvent(TraceEventType.Information, 101, "Loading all FunctionParameters");
+                    trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.FunctionParameters.ToArray().Length));
+
+                    trace.TraceEvent(TraceEventType.Information, 101, "Loading all Procedures");
+                    trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.Procedures.ToArray().Length));
+
+                    trace.TraceEvent(TraceEventType.Information, 101, "Loading all ProcedureParameters");
+                    trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.ProcedureParameters.ToArray().Length));
+
                     var allTableOrView = Context.Tables.Cast<TableOrView>().Union(Context.Views.Cast<TableOrView>()).ToArray();
 
                     nut.localTypes = allTableOrView.Select(p => p.Name).ToArray();
@@ -239,18 +275,12 @@ namespace EdmGen06 {
                     while (true) {
                         bool more = false;
                         foreach (var dbco in Context.TableConstraints.OfType<ForeignKeyConstraint>()) {
-                            dbco.ForeignKeys.Load();
                             foreach (var dbfk in dbco.ForeignKeys) {
-                                dbfk.FromColumnReference.Load();
-                                dbfk.FromColumn.ParentReference.Load();
 
                                 {
                                     var dbt = dbfk.FromColumn.Parent;
                                     if (!processTableOrView.Contains(dbt) && allTableOrView.Contains(dbt)) { processTableOrView.Add(dbt); more |= true; }
                                 }
-
-                                dbfk.ToColumnReference.Load();
-                                dbfk.ToColumn.ParentReference.Load();
 
                                 {
                                     var dbt = dbfk.ToColumn.Parent;
@@ -307,12 +337,10 @@ namespace EdmGen06 {
                         XElement csdlKey = null;
                         bool hasKey = false; // http://social.msdn.microsoft.com/Forums/en-US/94c227d3-3764-45b2-8c6b-e45b6cc8e169/keyless-object-workaround
                         bool hasId = dbt.Columns.Any(p => p.IsIdentity || p.Constraints.OfType<PrimaryKeyConstraint>().Any());
-                        dbt.Columns.Load();
                         foreach (var dbc in dbt.Columns) {
                             trace.TraceEvent(TraceEventType.Information, 101, " TableColumn: {0}", dbc.Name);
 
                             bool isIdGen = dbc.IsIdentity;
-                            dbc.Constraints.Load();
                             bool isId = isIdGen || dbc.Constraints.OfType<PrimaryKeyConstraint>().Any() || (hasId ? false : !dbc.IsNullable);
 
                             String ssdlName;
@@ -433,25 +461,14 @@ namespace EdmGen06 {
                         var csdlReferentialConstraint = new XElement(xCSDL + "ReferentialConstraint"
                             );
 
-                        dbco.ForeignKeys.Load();
-
                         foreach (var dbfk in dbco.ForeignKeys) {
-                            dbfk.FromColumnReference.Load();
-                            dbfk.FromColumn.ParentReference.Load();
-                            dbfk.FromColumn.Constraints.Load();
-                            dbfk.ToColumnReference.Load();
-                            dbfk.ToColumn.ParentReference.Load();
-                            dbfk.ToColumn.Constraints.Load();
-
                             int pkcFrom = 0;
                             foreach (var dbpk in dbfk.FromColumn.Constraints.OfType<PrimaryKeyConstraint>()) {
-                                dbpk.Columns.Load();
                                 pkcFrom = dbpk.Columns.Count;
                                 break;
                             }
                             int pkcTo = 0;
                             foreach (var dbpk in dbfk.ToColumn.Constraints.OfType<PrimaryKeyConstraint>()) {
-                                dbpk.Columns.Load();
                                 pkcTo = dbpk.Columns.Count;
                                 break;
                             }
@@ -529,7 +546,6 @@ namespace EdmGen06 {
                                 continue;
                             }
 
-                            if (!dbr.Parameters.IsLoaded) dbr.Parameters.Load();
                             foreach (var dbfp in dbr.Parameters) {
                                 trace.TraceEvent(TraceEventType.Information, 101, " Parameter: {0}", dbfp.Name);
 
