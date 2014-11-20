@@ -563,6 +563,18 @@ namespace EdmGen06 {
                                     break;
                                 }
 
+                                if (String.IsNullOrEmpty(nut.SsdlParameterMode(dbfp))) {
+                                    ssdlFunction.AddAfterSelf(new XComment(String.Format("Function {0} removed. Unknown SsdlParameterMode {1}"
+                                        , ssdlFunction.Attribute("Name")
+                                        , nut.SsdlParameterMode(dbfp))
+                                        ));
+
+                                    ssdlFunction.Remove();
+                                    csdlFunctionImport.Remove();
+                                    mslFunctionImportMapping.Remove();
+                                    break;
+                                }
+
                                 var ssdlParameter = new XElement(xSSDL + "Parameter"
                                     , new XAttribute("Name", nut.SsdlParameterName(dbfp))
                                     , new XAttribute("Mode", nut.SsdlParameterMode(dbfp))
@@ -576,6 +588,18 @@ namespace EdmGen06 {
                                     ssdlFunction.AddAfterSelf(new XComment(String.Format("Function {0} removed. Unknown ParameterType {1}"
                                         , ssdlFunction.Attribute("Name")
                                         , dbfp.ParameterType.TypeName)
+                                        ));
+
+                                    ssdlFunction.Remove();
+                                    csdlFunctionImport.Remove();
+                                    mslFunctionImportMapping.Remove();
+                                    break;
+                                }
+
+                                if (String.IsNullOrEmpty(nut.CsdlParameterMode(dbfp))) {
+                                    ssdlFunction.AddAfterSelf(new XComment(String.Format("Function {0} removed. Unknown ParameterMode {1}"
+                                        , ssdlFunction.Attribute("Name")
+                                        , nut.CsdlParameterMode(dbfp))
                                         ));
 
                                     ssdlFunction.Remove();
@@ -861,12 +885,30 @@ namespace EdmGen06 {
                 return String.Format("{0}.{1}", SsdlNs(), dbf.Name);
             }
 
+            SortedDictionary<String, bool> dictSsdlParameterName = new SortedDictionary<string, bool>();
+
             public String SsdlParameterName(Parameter dbfp) {
-                return String.Format("{0}", dbfp.Name);
+                for (int x = 0; ; x++) {
+                    String a = String.Format("{0}{1}", dbfp.Name, (x == 0) ? "" : "" + x);
+                    String k = dbfp.Routine.CatalogName + ":" + dbfp.Routine.Id + ":" + a;
+                    if (dictSsdlParameterName.ContainsKey(k)) continue;
+
+                    dictSsdlParameterName[k] = true;
+                    return a;
+                }
             }
 
+            SortedDictionary<String, bool> dictCsdlParameterName = new SortedDictionary<string, bool>();
+
             public String CsdlParameterName(Parameter dbfp) {
-                return String.Format("{0}", dbfp.Name);
+                for (int x = 0; ; x++) {
+                    String a = String.Format("{0}{1}", dbfp.Name, (x == 0) ? "" : "" + x);
+                    String k = dbfp.Routine.CatalogName + ":" + dbfp.Routine.Id + ":" + a;
+                    if (dictCsdlParameterName.ContainsKey(k)) continue;
+
+                    dictCsdlParameterName[k] = true;
+                    return a;
+                }
             }
 
             public String SsdlParameterMode(Parameter dbfp) {
