@@ -526,6 +526,7 @@ namespace EdmGen06 {
                                 ssdlFunction.Remove();
                                 csdlFunctionImport.Remove();
                                 mslFunctionImportMapping.Remove();
+                                continue;
                             }
 
                             if (!dbr.Parameters.IsLoaded) dbr.Parameters.Load();
