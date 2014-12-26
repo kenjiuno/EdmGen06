@@ -845,8 +845,15 @@ namespace EdmGen06 {
                 return null;
             }
 
+            List<ForeignKeyConstraint> alco = new List<ForeignKeyConstraint>();
+
             public String SsdlAssociationSet(ForeignKeyConstraint dbco) {
-                return String.Format("{0}", dbco.Name);
+                int p = alco.IndexOf(dbco);
+                if (p < 0) {
+                    p = alco.Count;
+                    alco.Add(dbco);
+                }
+                return String.Format("{0}_{1}", dbco.Name, 1 + p);
             }
 
             public String SsdlAssociationRef(ForeignKeyConstraint dbco) {
@@ -858,7 +865,12 @@ namespace EdmGen06 {
             }
 
             public String CsdlAssociationSet(ForeignKeyConstraint dbco) {
-                return String.Format("{0}", dbco.Name);
+                int p = alco.IndexOf(dbco);
+                if (p < 0) {
+                    p = alco.Count;
+                    alco.Add(dbco);
+                }
+                return String.Format("{0}_{1}", dbco.Name, 1 + p);
             }
 
             public String CsdlAssociationRef(ForeignKeyConstraint dbco) {
