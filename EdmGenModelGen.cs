@@ -853,7 +853,7 @@ namespace EdmGen06 {
                     p = alco.Count;
                     alco.Add(dbco);
                 }
-                return String.Format("{0}_{1}", dbco.Name, 1 + p);
+                return String.Format("{0}_{1}", TSimpleIdentifier(dbco.Name,"Association"), 1 + p);
             }
 
             public String SsdlAssociationRef(ForeignKeyConstraint dbco) {
@@ -870,7 +870,7 @@ namespace EdmGen06 {
                     p = alco.Count;
                     alco.Add(dbco);
                 }
-                return String.Format("{0}_{1}", dbco.Name, 1 + p);
+                return String.Format("{0}_{1}", TSimpleIdentifier(dbco.Name, "Association"), 1 + p);
             }
 
             public String CsdlAssociationRef(ForeignKeyConstraint dbco) {
