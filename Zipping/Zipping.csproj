@@ -35,37 +35,40 @@
     <CallTarget Targets="Clean;Build" />
   </Target>
   <Target Name="Clean">
-    <RemoveDir  Directories="$(SolutionDir)$(Configuration)" />
+    <RemoveDir  Directories="$(SolutionDir)$(Serial)" />
   </Target>
+  <PropertyGroup>
+    <Serial>EdmGen06-$([System.DateTime]::Now.ToString("yyyyMMdd-HHmmss"))-$(Configuration)</Serial>
+  </PropertyGroup>
   <Target Name="Build">
-    <MakeDir    Directories="$(SolutionDir)$(Configuration)\EFv35" />
-    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv35" SourceFiles="..\EFv35\bin\$(Configuration)\EdmGen06.exe" />
-    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv35" SourceFiles="..\EFv35\bin\$(Configuration)\EdmGen06.exe.config" />
-    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv35" SourceFiles="..\EFv35\bin\$(Configuration)\Mono.Security.dll" />
-    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv35" SourceFiles="..\EFv35\bin\$(Configuration)\Npgsql.dll" />
-    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv35" SourceFiles="..\EFv35\bin\$(Configuration)\Npgsql.EntityFrameworkLegacy.dll" />
-    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv35" SourceFiles="..\EFv35\bin\$(Configuration)\GenLegacyEF.bat" />
-    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv35" SourceFiles="..\EFv35\bin\$(Configuration)\GenLegacyEF_MS_EdmGen.bat" />
+    <MakeDir    Directories="$(SolutionDir)$(Serial)\EFv35" />
+    <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv35" SourceFiles="..\EFv35\bin\$(Configuration)\EdmGen06.exe" />
+    <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv35" SourceFiles="..\EFv35\bin\$(Configuration)\EdmGen06.exe.config" />
+    <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv35" SourceFiles="..\EFv35\bin\$(Configuration)\Mono.Security.dll" />
+    <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv35" SourceFiles="..\EFv35\bin\$(Configuration)\Npgsql.dll" />
+    <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv35" SourceFiles="..\EFv35\bin\$(Configuration)\Npgsql.EntityFrameworkLegacy.dll" />
+    <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv35" SourceFiles="..\EFv35\bin\$(Configuration)\GenLegacyEF.bat" />
+    <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv35" SourceFiles="..\EFv35\bin\$(Configuration)\GenLegacyEF_MS_EdmGen.bat" />
 
-    <MakeDir    Directories="$(SolutionDir)$(Configuration)\EFv40" />
-    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv40" SourceFiles="..\EFv40\bin\$(Configuration)\EdmGen06.exe" />
-    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv40" SourceFiles="..\EFv40\bin\$(Configuration)\EdmGen06.exe.config" />
-    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv40" SourceFiles="..\EFv40\bin\$(Configuration)\EntityFramework.dll" />
-    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv40" SourceFiles="..\EFv40\bin\$(Configuration)\Mono.Security.dll" />
-    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv40" SourceFiles="..\EFv40\bin\$(Configuration)\Npgsql.dll" />
-    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv40" SourceFiles="..\EFv40\bin\$(Configuration)\Npgsql.EntityFrameworkLegacy.dll" />
-    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv40" SourceFiles="..\EFv40\bin\$(Configuration)\GenLegacyEF.bat" />
+    <MakeDir    Directories="$(SolutionDir)$(Serial)\EFv40" />
+    <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv40" SourceFiles="..\EFv40\bin\$(Configuration)\EdmGen06.exe" />
+    <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv40" SourceFiles="..\EFv40\bin\$(Configuration)\EdmGen06.exe.config" />
+    <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv40" SourceFiles="..\EFv40\bin\$(Configuration)\EntityFramework.dll" />
+    <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv40" SourceFiles="..\EFv40\bin\$(Configuration)\Mono.Security.dll" />
+    <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv40" SourceFiles="..\EFv40\bin\$(Configuration)\Npgsql.dll" />
+    <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv40" SourceFiles="..\EFv40\bin\$(Configuration)\Npgsql.EntityFrameworkLegacy.dll" />
+    <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv40" SourceFiles="..\EFv40\bin\$(Configuration)\GenLegacyEF.bat" />
     
-    <MakeDir    Directories="$(SolutionDir)$(Configuration)\EFv60" />
-    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv60" SourceFiles="..\EFv60\bin\$(Configuration)\EdmGen06.exe" />
-    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv60" SourceFiles="..\EFv60\bin\$(Configuration)\EdmGen06.exe.config" />
-    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv60" SourceFiles="..\EFv60\bin\$(Configuration)\EntityFramework.dll" />
-    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv60" SourceFiles="..\EFv60\bin\$(Configuration)\Npgsql.dll" />
-    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv60" SourceFiles="..\EFv60\bin\$(Configuration)\Npgsql.EntityFramework.dll" />
-    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv60" SourceFiles="..\EFv60\bin\$(Configuration)\Mono.Security.dll" />
-    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv60" SourceFiles="..\EFv60\bin\$(Configuration)\GenEFv6.bat" />
+    <MakeDir    Directories="$(SolutionDir)$(Serial)\EFv60" />
+    <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv60" SourceFiles="..\EFv60\bin\$(Configuration)\EdmGen06.exe" />
+    <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv60" SourceFiles="..\EFv60\bin\$(Configuration)\EdmGen06.exe.config" />
+    <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv60" SourceFiles="..\EFv60\bin\$(Configuration)\EntityFramework.dll" />
+    <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv60" SourceFiles="..\EFv60\bin\$(Configuration)\Npgsql.dll" />
+    <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv60" SourceFiles="..\EFv60\bin\$(Configuration)\Npgsql.EntityFramework.dll" />
+    <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv60" SourceFiles="..\EFv60\bin\$(Configuration)\Mono.Security.dll" />
+    <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv60" SourceFiles="..\EFv60\bin\$(Configuration)\GenEFv6.bat" />
 
-    <Copy DestinationFolder="$(SolutionDir)$(Configuration)" SourceFiles="..\README.odt" />
+    <Copy DestinationFolder="$(SolutionDir)$(Serial)" SourceFiles="..\README.odt" />
   </Target>
   <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
        Other similar extension points exist, see Microsoft.Common.targets.
