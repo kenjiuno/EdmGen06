@@ -1,0 +1,77 @@
+﻿<?xml version="1.0" encoding="utf-8"?>
+<Project ToolsVersion="4.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
+  <Import Project="$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props" Condition="Exists('$(MSBuildExtensionsPath)\$(MSBuildToolsVersion)\Microsoft.Common.props')" />
+  <PropertyGroup>
+    <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
+    <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <ProjectGuid>{87B5170D-C063-4789-B5D3-7978FF7BE5D2}</ProjectGuid>
+    <OutputType>Exe</OutputType>
+    <AppDesignerFolder>Properties</AppDesignerFolder>
+    <RootNamespace>Zipping</RootNamespace>
+    <AssemblyName>Zipping</AssemblyName>
+    <TargetFrameworkVersion>v4.5</TargetFrameworkVersion>
+    <FileAlignment>512</FileAlignment>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugSymbols>true</DebugSymbols>
+    <DebugType>full</DebugType>
+    <Optimize>false</Optimize>
+    <OutputPath>bin\Debug\</OutputPath>
+    <DefineConstants>DEBUG;TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' ">
+    <PlatformTarget>AnyCPU</PlatformTarget>
+    <DebugType>pdbonly</DebugType>
+    <Optimize>true</Optimize>
+    <OutputPath>bin\Release\</OutputPath>
+    <DefineConstants>TRACE</DefineConstants>
+    <ErrorReport>prompt</ErrorReport>
+    <WarningLevel>4</WarningLevel>
+  </PropertyGroup>
+  <Target Name="Rebuild">
+    <CallTarget Targets="Clean;Build" />
+  </Target>
+  <Target Name="Clean">
+    <RemoveDir  Directories="$(SolutionDir)$(Configuration)" />
+  </Target>
+  <Target Name="Build">
+    <MakeDir    Directories="$(SolutionDir)$(Configuration)\EFv35" />
+    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv35" SourceFiles="..\EFv35\bin\$(Configuration)\EdmGen06.exe" />
+    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv35" SourceFiles="..\EFv35\bin\$(Configuration)\EdmGen06.exe.config" />
+    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv35" SourceFiles="..\EFv35\bin\$(Configuration)\Mono.Security.dll" />
+    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv35" SourceFiles="..\EFv35\bin\$(Configuration)\Npgsql.dll" />
+    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv35" SourceFiles="..\EFv35\bin\$(Configuration)\Npgsql.EntityFrameworkLegacy.dll" />
+    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv35" SourceFiles="..\EFv35\bin\$(Configuration)\GenLegacyEF.bat" />
+    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv35" SourceFiles="..\EFv35\bin\$(Configuration)\GenLegacyEF_MS_EdmGen.bat" />
+
+    <MakeDir    Directories="$(SolutionDir)$(Configuration)\EFv40" />
+    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv40" SourceFiles="..\EFv40\bin\$(Configuration)\EdmGen06.exe" />
+    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv40" SourceFiles="..\EFv40\bin\$(Configuration)\EdmGen06.exe.config" />
+    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv40" SourceFiles="..\EFv40\bin\$(Configuration)\EntityFramework.dll" />
+    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv40" SourceFiles="..\EFv40\bin\$(Configuration)\Mono.Security.dll" />
+    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv40" SourceFiles="..\EFv40\bin\$(Configuration)\Npgsql.dll" />
+    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv40" SourceFiles="..\EFv40\bin\$(Configuration)\Npgsql.EntityFrameworkLegacy.dll" />
+    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv40" SourceFiles="..\EFv40\bin\$(Configuration)\GenLegacyEF.bat" />
+    
+    <MakeDir    Directories="$(SolutionDir)$(Configuration)\EFv60" />
+    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv60" SourceFiles="..\EFv60\bin\$(Configuration)\EdmGen06.exe" />
+    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv60" SourceFiles="..\EFv60\bin\$(Configuration)\EdmGen06.exe.config" />
+    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv60" SourceFiles="..\EFv60\bin\$(Configuration)\EntityFramework.dll" />
+    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv60" SourceFiles="..\EFv60\bin\$(Configuration)\Npgsql.dll" />
+    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv60" SourceFiles="..\EFv60\bin\$(Configuration)\Npgsql.EntityFramework.dll" />
+    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv60" SourceFiles="..\EFv60\bin\$(Configuration)\Mono.Security.dll" />
+    <Copy DestinationFolder="$(SolutionDir)$(Configuration)\EFv60" SourceFiles="..\EFv60\bin\$(Configuration)\GenEFv6.bat" />
+
+    <Copy DestinationFolder="$(SolutionDir)$(Configuration)" SourceFiles="..\README.odt" />
+  </Target>
+  <!-- To modify your build process, add your task inside one of the targets below and uncomment it. 
+       Other similar extension points exist, see Microsoft.Common.targets.
+  <Target Name="BeforeBuild">
+  </Target>
+  <Target Name="AfterBuild">
+  </Target>
+  -->
+</Project>
