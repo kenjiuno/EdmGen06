@@ -1,8 +1,12 @@
 ﻿EdmGen06
  /ModelGen   <connectionString> <providerName> <modelName> <targetSchema> <ver>
  /EFModelGen <connectionString> <providerName> <DbProviderServices> <modelName> <targetSchema> <ver>
+ /EFCodeFirstGen <input.edmx> <output.cs> <generator>
  /DataSet <connectionString> <providerName> <modelName> <targetSchema>
  /DataSet.cs <DataSet1.xsd> <DataSet1.cs>
+
+rem <ver> is ssdl/msl/csdl schema version: 1.0 or 3.0
+rem <generator>: DbContext.EFv6 or DbContext.EFv5 or ObjectContext
 
 rem [SqlServer Example]
 
