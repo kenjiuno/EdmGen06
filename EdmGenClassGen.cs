@@ -52,7 +52,7 @@ namespace EdmGen06 {
                             EntitySet = vEntityContainer.Elements(nsCSDL + "EntitySet").Select(
                                 vEntitySet => new {
                                     Name = vEntitySet.Attribute("Name").Value,
-                                    EntityType = vEntitySet.Attribute("EntityType").Value,
+                                    EntityType = vEntitySet.Attribute("EntityType").Value.Split('.')[1],
                                 }
                             ),
                         }
@@ -73,8 +73,7 @@ namespace EdmGen06 {
                                 vNavigationProperty => new {
                                     Name = vNavigationProperty.Attribute("Name").Value,
                                     Type = vNavigationProperty.Attribute("Name").Value,
-                                    Many = false,
-                                    One = true,
+                                    Many = IsRelationship(vNavigationProperty.Attribute("Name"), vNavigationProperty.Attribute("Relationship"), vNavigationProperty.Attribute("ToRole"), Schema.Elements(nsCSDL + "Association"), true, nsCSDL),
                                 }
                             )
                         }
@@ -82,6 +81,17 @@ namespace EdmGen06 {
                 };
                 File.WriteAllText(fpcs, new UtFakeSSVE(template, Model).Generated);
             }
+        }
+
+        bool IsRelationship(XAttribute Name, XAttribute Relationship, XAttribute ToRole, IEnumerable<XElement> Association, bool isMany, XNamespace nsCSDL) {
+            var NameSearch = Relationship.Value.Split('.')[1];
+            foreach (var End in Association.Where(vAssociation => vAssociation.Attribute("Name").Value == NameSearch).Elements(nsCSDL + "End")) {
+                if (End.Attribute("Role").Value == ToRole.Value) {
+                    var Multiplicity = End.Attribute("Multiplicity").Value;
+                    return ((Multiplicity == "*") == isMany);
+                }
+            }
+            return false;
         }
 
         String CheckTypeSigned(String edmType, bool nullable) {
@@ -105,7 +115,7 @@ namespace EdmGen06 {
             static Regex atModel = new Regex("@(?<a>Model|Current)(\\.(?<b>\\w+))?");
             static Regex atEach = new Regex("@Each\\.(?<a>\\w+)");
             static Regex atEndEach = new Regex("@EndEach");
-            static Regex atIf = new Regex("@If\\.(?<a>\\w+)");
+            static Regex atIf = new Regex("@If(?<b>Not)?\\.(?<a>\\w+)");
             static Regex atEndIf = new Regex("@EndIf");
 
             StringWriter wr = new StringWriter();
@@ -149,8 +159,9 @@ namespace EdmGen06 {
                             Walk(ref y, model, null, true);
                         }
                         else {
+                            bool test = mIf.Groups["b"].Value != "Not";
                             var flag = Pickup(model, current, mIf.Groups["a"].Value);
-                            if (flag is bool && (bool)flag) {
+                            if (flag is bool && (bool)flag == test) {
                                 Walk(ref y, model, current, false);
                             }
                             else {

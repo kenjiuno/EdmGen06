@@ -24,7 +24,9 @@ namespace @Model.Namespace {
   public class @Current.Name {
     public @Current.Name() {
 @Each.NavigationProperty
+@If.Many
       this.@Current.Name = new HashSet<@Current.Type>();
+@EndIf
 @EndEach
     }
 
@@ -39,7 +41,7 @@ namespace @Model.Namespace {
 @If.Many
     public virtual ICollection<@Current.Type> @Current.Name { get; set; }
 @EndIf
-@If.One
+@IfNot.Many
     public virtual @Current.Type @Current.Name { get; set; }
 @EndIf
 @EndEach
