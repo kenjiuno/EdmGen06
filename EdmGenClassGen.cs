@@ -87,11 +87,12 @@ namespace EdmGen06 {
                                     Type = vProperty.Attribute("Type").Value,
                                     TypeSigned = CheckTypeSigned(vProperty.Attribute("Type").Value, CheckNullable(vProperty.Attribute("Nullable"))),
                                     Nullable = CheckNullable(vProperty.Attribute("Nullable")),
-                                    Identity = CheckIdentity(vProperty.Attribute(nsAnno + "StoreGeneratedPattern"))
+                                    Identity = CheckIdentity(vProperty.Attribute(nsAnno + "StoreGeneratedPattern")),
                                 }
                             ),
                             NavigationProperty = vEntityType.Elements(nsCSDL + "NavigationProperty").Select(
                                 vNavigationProperty => new {
+                                    EntityTypeName = vEntityType.Attribute("Name").Value,
                                     Name = vNavigationProperty.Attribute("Name").Value,
                                     FromRole = FindNavigationProperty(dAssoc, vNavigationProperty, true),
                                     ToRole = FindNavigationProperty(dAssoc, vNavigationProperty, false),
@@ -124,9 +125,41 @@ namespace EdmGen06 {
             public bool One { get { return Multiplicity == "1"; } }
             public bool ZeroOrOne { get { return Multiplicity == "0..1"; } }
 
+            public String Name { get { return Association.Attribute("Name").Value; } }
+
             public String Type { get { return Association.Elements(nsCSDL + "End").Skip(asc ? 0 : 1).First().Attribute("Type").Value.Split('.')[1]; } }
 
+            public String Type1 { get { return Association.Elements(nsCSDL + "End").Skip(asc ? 0 : 1).First().Attribute("Type").Value.Split('.')[1]; } }
+            public String Type2 { get { return Association.Elements(nsCSDL + "End").Skip(asc ? 1 : 0).First().Attribute("Type").Value.Split('.')[1]; } }
+
             public String Multiplicity { get { return Association.Elements(nsCSDL + "End").Skip(asc ? 0 : 1).First().Attribute("Multiplicity").Value; } }
+
+            public String Multiplicity1 { get { return Association.Elements(nsCSDL + "End").Skip(asc ? 0 : 1).First().Attribute("Multiplicity").Value; } }
+            public String Multiplicity2 { get { return Association.Elements(nsCSDL + "End").Skip(asc ? 1 : 0).First().Attribute("Multiplicity").Value; } }
+
+            public String RelationshipMultiplicity1 {
+                get {
+                    var s = Multiplicity1;
+                    switch (s) {
+                        case "*": return "Many";
+                        case "1": return "One";
+                        case "0..1": return "ZeroOrOne";
+                    }
+                    throw new ApplicationException("Unknown RelationshipMultiplicity \"" + s + "\"");
+                }
+            }
+
+            public String RelationshipMultiplicity2 {
+                get {
+                    var s = Multiplicity2;
+                    switch (s) {
+                        case "*": return "Many";
+                        case "1": return "One";
+                        case "0..1": return "ZeroOrOne";
+                    }
+                    throw new ApplicationException("Unknown RelationshipMultiplicity \"" + s + "\"");
+                }
+            }
 
             public String Role1 { get { return Association.Elements(nsCSDL + "End").Skip(asc ? 0 : 1).First().Attribute("Role").Value; } }
             public String Role2 { get { return Association.Elements(nsCSDL + "End").Skip(asc ? 1 : 0).First().Attribute("Role").Value; } }
@@ -150,7 +183,7 @@ namespace EdmGen06 {
 
         // https://github.com/grumpydev/SuperSimpleViewEngine
         class UtFakeSSVE {
-            static Regex atModel = new Regex("@(?<a>Model|Current)(\\.(?<b>[\\w\\.]+))?");
+            static Regex atModel = new Regex("@(?<a>Model|Current)\\[?(\\.(?<b>\\w+(\\.\\w+)*))?\\]?");
             static Regex atEach = new Regex("@Each\\.(?<a>[\\w\\.]+)");
             static Regex atEndEach = new Regex("@EndEach");
             static Regex atIf = new Regex("@If(?<b>Not)?\\.(?<a>[\\w\\.]+)");
@@ -174,7 +207,7 @@ namespace EdmGen06 {
                     if (mEach.Success) {
                         y++;
                         int oy = y;
-                        var iter = mute ? null : Pickup(model, current, mEach.Groups["a"].Value) as IEnumerable;
+                        var iter = mute ? null : Pickup(model, current, mEach.Groups["a"].Value, y) as IEnumerable;
                         if (iter != null) {
                             foreach (var ob in iter) {
                                 y = oy;
@@ -198,7 +231,7 @@ namespace EdmGen06 {
                         }
                         else {
                             bool test = mIf.Groups["b"].Value != "Not";
-                            var flag = Pickup(model, current, mIf.Groups["a"].Value);
+                            var flag = Pickup(model, current, mIf.Groups["a"].Value, y);
                             if (flag is bool && (bool)flag == test) {
                                 Walk(ref y, model, current, false);
                             }
@@ -215,19 +248,27 @@ namespace EdmGen06 {
                     }
                     y++;
                     if (mute) continue;
+                    int ycur = y;
                     wr.WriteLine(atModel.Replace(row, mModel => {
                         Object ob = (mModel.Groups["a"].Value == "Model") ? model : current;
                         String member = mModel.Groups["b"].Value;
-                        return (member.Length == 0) ? "" + ob : "" + Pickup(ob, null, member);
+                        return (member.Length == 0) ? "" + ob : "" + Pickup(ob, null, member, ycur);
                     }));
                 }
             }
 
-            private static object Pickup(object model, object current, string member) {
+            static object Pickup(object model, object current, string member, int y) {
                 Object ob = current ?? model;
                 foreach (string m1 in member.Split('.')) {
-                    ob = ob.GetType().InvokeMember(m1, BindingFlags.GetField | BindingFlags.GetProperty, null, ob, new object[0]);
+                    try {
+                        ob = ob.GetType().InvokeMember(m1, BindingFlags.GetField | BindingFlags.GetProperty, null, ob, new object[0]);
+                    }
+                    catch (System.MissingMethodException) {
+                        throw new ApplicationException(String.Format("Line {0}, parameter \"{1}\" unknown", y, m1));
+                    }
                 }
+                if (ob is bool)
+                    return ((bool)ob) ? "true" : "false";
                 return ob;
             }
         }

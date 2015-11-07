@@ -1,3 +1,166 @@
-﻿namespace %Namespace% {
-%Body%
+﻿using System;
+using System.ComponentModel;
+using System.Data.Entity.Core.EntityClient;
+using System.Data.Entity.Core.Objects;
+using System.Data.Entity.Core.Objects.DataClasses;
+using System.Linq;
+using System.Runtime.Serialization;
+using System.Xml.Serialization;
+
+[assembly: EdmSchemaAttribute()]
+#region EDM Relationship Metadata
+@Each.Association
+[assembly: EdmRelationshipAttribute(
+  "@Model.Namespace", 
+  "@Current.Name", 
+  "@Current.Role1", 
+  System.Data.Entity.Core.Metadata.Edm.RelationshipMultiplicity.@Current.RelationshipMultiplicity1, 
+  typeof(@Current.Type1), 
+  "@Current.Role2", 
+  System.Data.Entity.Core.Metadata.Edm.RelationshipMultiplicity.@Current.RelationshipMultiplicity2, 
+  typeof(@Current.Type2), 
+  true)
+  ]
+@EndEach
+#endregion
+
+namespace @Model.Namespace
+{
+  #region Contexts
+
+@Each.EntityContainer
+  public class @Current.Name : ObjectContext {
+    #region Constructors
+    
+    public @Current.Name() : base("name=@Current.Name", "@Current.Name")
+    {
+        this.ContextOptions.LazyLoadingEnabled = true;
+        OnContextCreated();
+    }
+
+    public @Current.Name(string connectionString) : base(connectionString, "@Current.Name")
+    {
+        this.ContextOptions.LazyLoadingEnabled = true;
+        OnContextCreated();
+    }
+
+    public @Current.Name(EntityConnection connection) : base(connection, "@Current.Name")
+    {
+        this.ContextOptions.LazyLoadingEnabled = true;
+        OnContextCreated();
+    }
+
+    #endregion
+    
+    #region Partial Methods
+
+    partial void OnContextCreated();
+
+    #endregion
+
+    #region ObjectSet Properties
+
+@Each.EntitySet
+    public ObjectSet<@Current.EntityType> @Current.Name
+    {
+      get {
+        if (_@Current.Name == null) {
+          _@Current.Name = base.CreateObjectSet<@Current.EntityType>("@Current.Name");
+        }
+        return _@Current.Name;
+      }
+    }
+    private ObjectSet<@Current.EntityType> _@Current.Name;
+
+@EndEach
+    #endregion
+    
+    #region AddTo Methods
+    
+@Each.EntitySet
+    public void AddTo@Current.Name(@Current.EntityType @Current.Name)
+    {
+      base.AddObject("@Current.Name", @Current.Name);
+    }
+    
+@EndEach
+    #endregion
+  }
+@EndEach
+
+  #endregion
+
+  #region Entities
+
+@Each.EntityType
+  [EdmEntityTypeAttribute(NamespaceName="@Model.Namespace", Name="@Current.Name")]
+  [Serializable()]
+  [DataContractAttribute(IsReference=true)]
+  public class @Current.Name : EntityObject {
+    #region Factory Method
+    
+    public static @Current.Name() Create@Current.Name() {
+      ..
+    }
+
+    #endregion
+    
+    #region Simple Properties
+
+@Each.Property
+    [EdmScalarPropertyAttribute(EntityKeyProperty=@Current.Identity, IsNullable=@Current.Nullable)]
+    [DataMemberAttribute()]
+    public @Current.TypeSigned @Current.Name
+    {
+        get
+        {
+            return _@Current.Name;
+        }
+        set
+        {
+            if (_@Current.Name != value)
+            {
+                On@Current[.Name]Changing(value);
+                ReportPropertyChanging("@Current.Name");
+                _file = StructuralObject.SetValidValue(value);
+                ReportPropertyChanged("@Current.Name");
+                On@Current[.Name]Changed();
+            }
+        }
+    }
+    private @Current.TypeSigned _@Current.Name;
+    partial void On@Current[.Name]Changing(@Current.TypeSigned @Current.Name);
+    partial void On@Current[.Name]Changed();
+
+@EndEach
+    #endregion
+    
+    #region Navigation Properties
+    
+@Each.NavigationProperty
+    [XmlIgnoreAttribute()]
+    [SoapIgnoreAttribute()]
+    [DataMemberAttribute()]
+    [EdmRelationshipNavigationPropertyAttribute("@Model.Namespace", "@Current.Name", "@Current.EntityTypeName")]
+    public EntityCollection<@Current.EntityTypeName> @Current.EntityTypeName
+    {
+      get
+      {
+        return ((IEntityWithRelationships)this).RelationshipManager.GetRelatedCollection<@Current.EntityTypeName>("@Model.Namespace.@Current.Name", "@Current.EntityTypeName");
+      }
+      set
+      {
+        if ((value != null))
+        {
+            ((IEntityWithRelationships)this).RelationshipManager.InitializeRelatedCollection<@Current.EntityTypeName>("@Model.Namespace.@Current.Name", "@Current.EntityTypeName", value);
+        }
+      }
+    }
+
+@EndEach
+    #endregion
+  }
+
+@EndEach
+  #endregion
 }
