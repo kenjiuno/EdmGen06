@@ -141,19 +141,29 @@ namespace @Model.Namespace
     [XmlIgnoreAttribute()]
     [SoapIgnoreAttribute()]
     [DataMemberAttribute()]
-    [EdmRelationshipNavigationPropertyAttribute("@Model.Namespace", "@Current.Name", "@Current.EntityTypeName")]
+    [EdmRelationshipNavigationPropertyAttribute("@Model.Namespace", "@Current.ToRole.Name", "@Current.EntityTypeName")]
+@If.ToRole.Many
     public EntityCollection<@Current.EntityTypeName> @Current.EntityTypeName
+@EndIf
+@IfNot.ToRole.Many
+    public @Current.EntityTypeName @Current.EntityTypeName
+@EndIf
     {
       get
       {
-        return ((IEntityWithRelationships)this).RelationshipManager.GetRelatedCollection<@Current.EntityTypeName>("@Model.Namespace.@Current.Name", "@Current.EntityTypeName");
+        return ((IEntityWithRelationships)this).RelationshipManager.GetRelatedCollection<@Current.EntityTypeName>("@Model.Namespace.@Current.ToRole.Name", "@Current.EntityTypeName");
       }
       set
       {
+@If.ToRole.Many
         if ((value != null))
         {
-            ((IEntityWithRelationships)this).RelationshipManager.InitializeRelatedCollection<@Current.EntityTypeName>("@Model.Namespace.@Current.Name", "@Current.EntityTypeName", value);
+            ((IEntityWithRelationships)this).RelationshipManager.InitializeRelatedCollection<@Current.EntityTypeName>("@Model.Namespace.@Current.ToRole.Name", "@Current.EntityTypeName", value);
         }
+@EndIf
+@IfNot.ToRole.Many
+        ((IEntityWithRelationships)this).RelationshipManager.GetRelatedReference<@Current.EntityTypeName>("@Model.Namespace.@Current.ToRole.Name", "@Current.EntityTypeName").Value = value;
+@EndIf
       }
     }
 

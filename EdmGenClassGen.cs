@@ -186,7 +186,7 @@ namespace EdmGen06 {
             static Regex atModel = new Regex("@(?<a>Model|Current)\\[?(\\.(?<b>\\w+(\\.\\w+)*))?\\]?");
             static Regex atEach = new Regex("@Each\\.(?<a>[\\w\\.]+)");
             static Regex atEndEach = new Regex("@EndEach");
-            static Regex atIf = new Regex("@If(?<b>Not)?\\.(?<a>[\\w\\.]+)");
+            static Regex atIf = new Regex("@If(?<b>Not)?\\[?\\.(?<a>\\w+(\\.\\w+)*)\\]?");
             static Regex atEndIf = new Regex("@EndIf");
 
             StringWriter wr = new StringWriter();
@@ -252,9 +252,15 @@ namespace EdmGen06 {
                     wr.WriteLine(atModel.Replace(row, mModel => {
                         Object ob = (mModel.Groups["a"].Value == "Model") ? model : current;
                         String member = mModel.Groups["b"].Value;
-                        return (member.Length == 0) ? "" + ob : "" + Pickup(ob, null, member, ycur);
+                        return (member.Length == 0) ? "" + ob : "" + FormatDisp(Pickup(ob, null, member, ycur));
                     }));
                 }
+            }
+
+            private string FormatDisp(object p) {
+                if (p is bool)
+                    return ((bool)p) ? "true" : "false";
+                return "" + p;
             }
 
             static object Pickup(object model, object current, string member, int y) {
@@ -267,8 +273,6 @@ namespace EdmGen06 {
                         throw new ApplicationException(String.Format("Line {0}, parameter \"{1}\" unknown", y, m1));
                     }
                 }
-                if (ob is bool)
-                    return ((bool)ob) ? "true" : "false";
                 return ob;
             }
         }
