@@ -26,6 +26,8 @@ using System.Text;
 using System.Collections.Generic;
 using System.Collections;
 
+// Multiplicity <0..1> <1> <*>  https://msdn.microsoft.com/en-us/library/ff952928(v=sql.105).aspx
+
 namespace EdmGen06 {
     public class EdmGenClassGen : EdmGenBase {
         public EdmGenClassGen() {
@@ -41,8 +43,27 @@ namespace EdmGen06 {
                 .Element(EDMXv3 + "Runtime")
                 .Element(EDMXv3 + "ConceptualModels")
                 .Element(CSDLv3 + "Schema");
-            String template = Resources.DbContext_EFv6;
+            String template = null;
+            if (false) { }
+            else if ("DbContext.EFv6".Equals(generator)) template = Resources.DbContext_EFv6;
+            else if ("DbContext.EFv5".Equals(generator)) template = Resources.DbContext_EFv5;
+            else if ("ObjectContext".Equals(generator)) template = Resources.ObjectContext;
+            else {
+                trace.TraceEvent(TraceEventType.Error, 101, "generator \"" + generator + "\" is unknown");
+                throw new ApplicationException("generator \"" + generator + "\" is unknown");
+            }
             if (true) {
+                SortedDictionary<string, Assoc> dAssoc = new SortedDictionary<string, Assoc>();
+                List<Assoc> alAssoc = new List<Assoc>();
+                var Alias = Schema.Attribute("Alias").Value;
+                foreach (var Association in Schema.Elements(nsCSDL + "Association")) {
+                    var Name = Association.Attribute("Name").Value;
+                    var assoc12 = new Assoc(Association, nsCSDL, true);
+                    var assoc21 = new Assoc(Association, nsCSDL, false);
+                    dAssoc[String.Format("{0}.{1}>{2}", Alias, Name, assoc12.Role1)] = assoc12;
+                    dAssoc[String.Format("{0}.{1}>{2}", Alias, Name, assoc21.Role1)] = assoc21;
+                    alAssoc.Add(assoc12);
+                }
                 var nsAnno = XNamespace.Get("http://schemas.microsoft.com/ado/2009/02/edm/annotation");
                 var Model = new {
                     Namespace = Schema.Attribute("Namespace").Value,
@@ -72,26 +93,43 @@ namespace EdmGen06 {
                             NavigationProperty = vEntityType.Elements(nsCSDL + "NavigationProperty").Select(
                                 vNavigationProperty => new {
                                     Name = vNavigationProperty.Attribute("Name").Value,
-                                    Type = vNavigationProperty.Attribute("Name").Value,
-                                    Many = IsRelationship(vNavigationProperty.Attribute("Name"), vNavigationProperty.Attribute("Relationship"), vNavigationProperty.Attribute("ToRole"), Schema.Elements(nsCSDL + "Association"), true, nsCSDL),
+                                    FromRole = FindNavigationProperty(dAssoc, vNavigationProperty, true),
+                                    ToRole = FindNavigationProperty(dAssoc, vNavigationProperty, false),
                                 }
                             )
                         }
                     ),
+                    Association = alAssoc,
                 };
                 File.WriteAllText(fpcs, new UtFakeSSVE(template, Model).Generated);
             }
         }
 
-        bool IsRelationship(XAttribute Name, XAttribute Relationship, XAttribute ToRole, IEnumerable<XElement> Association, bool isMany, XNamespace nsCSDL) {
-            var NameSearch = Relationship.Value.Split('.')[1];
-            foreach (var End in Association.Where(vAssociation => vAssociation.Attribute("Name").Value == NameSearch).Elements(nsCSDL + "End")) {
-                if (End.Attribute("Role").Value == ToRole.Value) {
-                    var Multiplicity = End.Attribute("Multiplicity").Value;
-                    return ((Multiplicity == "*") == isMany);
-                }
+        Assoc FindNavigationProperty(SortedDictionary<string, Assoc> dAssoc, XElement vNavigationProperty, bool fromRole) {
+            return dAssoc[String.Format("{0}>{1}", vNavigationProperty.Attribute("Relationship").Value, vNavigationProperty.Attribute(fromRole ? "FromRole" : "ToRole").Value)];
+        }
+
+        class Assoc {
+            XElement Association;
+            XNamespace nsCSDL;
+            bool asc;
+
+            public Assoc(XElement Association, XNamespace nsCSDL, bool asc) {
+                this.Association = Association;
+                this.nsCSDL = nsCSDL;
+                this.asc = asc;
             }
-            return false;
+
+            public bool Many { get { return Multiplicity == "*"; } }
+            public bool One { get { return Multiplicity == "1"; } }
+            public bool ZeroOrOne { get { return Multiplicity == "0..1"; } }
+
+            public String Type { get { return Association.Elements(nsCSDL + "End").Skip(asc ? 0 : 1).First().Attribute("Type").Value.Split('.')[1]; } }
+
+            public String Multiplicity { get { return Association.Elements(nsCSDL + "End").Skip(asc ? 0 : 1).First().Attribute("Multiplicity").Value; } }
+
+            public String Role1 { get { return Association.Elements(nsCSDL + "End").Skip(asc ? 0 : 1).First().Attribute("Role").Value; } }
+            public String Role2 { get { return Association.Elements(nsCSDL + "End").Skip(asc ? 1 : 0).First().Attribute("Role").Value; } }
         }
 
         String CheckTypeSigned(String edmType, bool nullable) {
@@ -112,10 +150,10 @@ namespace EdmGen06 {
 
         // https://github.com/grumpydev/SuperSimpleViewEngine
         class UtFakeSSVE {
-            static Regex atModel = new Regex("@(?<a>Model|Current)(\\.(?<b>\\w+))?");
-            static Regex atEach = new Regex("@Each\\.(?<a>\\w+)");
+            static Regex atModel = new Regex("@(?<a>Model|Current)(\\.(?<b>[\\w\\.]+))?");
+            static Regex atEach = new Regex("@Each\\.(?<a>[\\w\\.]+)");
             static Regex atEndEach = new Regex("@EndEach");
-            static Regex atIf = new Regex("@If(?<b>Not)?\\.(?<a>\\w+)");
+            static Regex atIf = new Regex("@If(?<b>Not)?\\.(?<a>[\\w\\.]+)");
             static Regex atEndIf = new Regex("@EndIf");
 
             StringWriter wr = new StringWriter();
@@ -187,7 +225,10 @@ namespace EdmGen06 {
 
             private static object Pickup(object model, object current, string member) {
                 Object ob = current ?? model;
-                return ob.GetType().InvokeMember(member, BindingFlags.GetField | BindingFlags.GetProperty, null, ob, new object[0]);
+                foreach (string m1 in member.Split('.')) {
+                    ob = ob.GetType().InvokeMember(m1, BindingFlags.GetField | BindingFlags.GetProperty, null, ob, new object[0]);
+                }
+                return ob;
             }
         }
     }
