@@ -183,11 +183,12 @@ namespace EdmGen06 {
 
         // https://github.com/grumpydev/SuperSimpleViewEngine
         class UtFakeSSVE {
-            static Regex atModel = new Regex("@(?<a>Model|Current)\\[?(\\.(?<b>\\w+(\\.\\w+)*))?\\]?");
+            static Regex atModel = new Regex("@(?<a>Model|Current|Parent)\\[?(\\.(?<b>\\w+(\\.\\w+)*))?\\]?");
             static Regex atEach = new Regex("@Each\\.(?<a>[\\w\\.]+)");
             static Regex atEndEach = new Regex("@EndEach");
             static Regex atIf = new Regex("@If(?<b>Not)?\\[?\\.(?<a>\\w+(\\.\\w+)*)\\]?");
             static Regex atEndIf = new Regex("@EndIf");
+            static Regex atFuncParam = new Regex("@FuncParam\\[?\\.(?<a>\\w+(\\.\\w+)*)\\]?(?<b>.+?)@EndFuncParam");
 
             StringWriter wr = new StringWriter();
             String[] rows;
@@ -195,12 +196,12 @@ namespace EdmGen06 {
             public UtFakeSSVE(String template, object model) {
                 rows = template.Replace("\r\n", "\n").Split('\n');
                 int y = 0;
-                Walk(ref y, model, null, false);
+                Walk(ref y, model, null, null, false);
             }
 
             public String Generated { get { return wr.ToString(); } }
 
-            void Walk(ref int y, object model, object current, bool mute) {
+            void Walk(ref int y, object model, object current, object parent, bool mute) {
                 for (; y < rows.Length; ) {
                     var row = rows[y];
                     var mEach = atEach.Match(row);
@@ -211,11 +212,11 @@ namespace EdmGen06 {
                         if (iter != null) {
                             foreach (var ob in iter) {
                                 y = oy;
-                                Walk(ref y, model, ob, mute);
+                                Walk(ref y, model, ob, current, mute);
                             }
                         }
                         y = oy;
-                        Walk(ref y, model, null, true);
+                        Walk(ref y, model, null, null, true);
                         continue;
                     }
                     var mEndEach = atEndEach.Match(row);
@@ -227,16 +228,16 @@ namespace EdmGen06 {
                     if (mIf.Success) {
                         y++;
                         if (mute) {
-                            Walk(ref y, model, null, true);
+                            Walk(ref y, model, null, null, true);
                         }
                         else {
                             bool test = mIf.Groups["b"].Value != "Not";
                             var flag = Pickup(model, current, mIf.Groups["a"].Value, y);
                             if (flag is bool && (bool)flag == test) {
-                                Walk(ref y, model, current, false);
+                                Walk(ref y, model, current, parent, false);
                             }
                             else {
-                                Walk(ref y, model, null, true);
+                                Walk(ref y, model, null, null, true);
                             }
                         }
                         continue;
@@ -246,15 +247,42 @@ namespace EdmGen06 {
                         y++;
                         break;
                     }
+                    var mFuncParam = atFuncParam.Match(row);
+                    if (mFuncParam.Success) {
+                        String insert = "";
+                        if (!mute) {
+                            var iter = Pickup(model, current, mFuncParam.Groups["a"].Value, 1 + y) as IEnumerable;
+                            if (iter != null) {
+                                int x = 0;
+                                foreach (object ob in iter) {
+                                    x++;
+                                    if (x != 1)
+                                        insert += ", ";
+                                    insert += Expr(mFuncParam.Groups["b"].Value.Trim(), model, ob, current, 1 + y);
+                                }
+                            }
+                        }
+                        row = row.Substring(0, mFuncParam.Index) + insert + row.Substring(mFuncParam.Index + mFuncParam.Length);
+                    }
                     y++;
                     if (mute) continue;
-                    int ycur = y;
-                    wr.WriteLine(atModel.Replace(row, mModel => {
-                        Object ob = (mModel.Groups["a"].Value == "Model") ? model : current;
-                        String member = mModel.Groups["b"].Value;
-                        return (member.Length == 0) ? "" + ob : "" + FormatDisp(Pickup(ob, null, member, ycur));
-                    }));
+
+                    wr.WriteLine(Expr(row, model, current, parent, y));
                 }
+            }
+
+            string Expr(string row, object model, object current, object parent, int y) {
+                return (atModel.Replace(row, mModel => {
+                    Object ob;
+                    var mode = mModel.Groups["a"].Value;
+                    if (false) { }
+                    else if (mode == "Model") ob = model;
+                    else if (mode == "Current") ob = current;
+                    else if (mode == "Parent") ob = parent;
+                    else throw new ApplicationException("Unknown @" + mode);
+                    String member = mModel.Groups["b"].Value;
+                    return (member.Length == 0) ? "" + ob : "" + FormatDisp(Pickup(ob, null, member, y));
+                }));
             }
 
             private string FormatDisp(object p) {

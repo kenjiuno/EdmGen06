@@ -99,8 +99,12 @@ namespace @Model.Namespace
   public class @Current.Name : EntityObject {
     #region Factory Method
     
-    public static @Current.Name() Create@Current.Name() {
-      ..
+    public static @Current.Name Create@Current.Name(@FuncParam.Property @Current.TypeSigned @Current.Name @EndFuncParam) {
+      @Current.Name @Current.Name = new @Current.Name();
+@Each.Property
+      @Parent.Name.@Current.Name = @Current.Name;
+@EndEach
+      return @Current.Name;
     }
 
     #endregion
