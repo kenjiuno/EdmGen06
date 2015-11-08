@@ -56,12 +56,15 @@ namespace EdmGen06 {
                 SortedDictionary<string, Assoc> dAssoc = new SortedDictionary<string, Assoc>();
                 List<Assoc> alAssoc = new List<Assoc>();
                 var Alias = Schema.Attribute("Alias").Value;
+                var Namespace= Schema.Attribute("Namespace").Value;
                 foreach (var Association in Schema.Elements(nsCSDL + "Association")) {
                     var Name = Association.Attribute("Name").Value;
                     var assoc12 = new Assoc(Association, nsCSDL, true);
                     var assoc21 = new Assoc(Association, nsCSDL, false);
                     dAssoc[String.Format("{0}.{1}>{2}", Alias, Name, assoc12.Role1)] = assoc12;
+                    dAssoc[String.Format("{0}.{1}>{2}", Namespace, Name, assoc12.Role1)] = assoc12;
                     dAssoc[String.Format("{0}.{1}>{2}", Alias, Name, assoc21.Role1)] = assoc21;
+                    dAssoc[String.Format("{0}.{1}>{2}", Namespace, Name, assoc21.Role1)] = assoc21;
                     alAssoc.Add(assoc12);
                 }
                 var nsAnno = XNamespace.Get("http://schemas.microsoft.com/ado/2009/02/edm/annotation");
