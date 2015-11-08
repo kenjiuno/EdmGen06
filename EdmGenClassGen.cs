@@ -49,7 +49,7 @@ namespace EdmGen06 {
             else if ("DbContext.EFv5".Equals(generator)) template = Resources.DbContext_EFv5;
             else if ("ObjectContext".Equals(generator)) template = Resources.ObjectContext;
             else {
-                trace.TraceEvent(TraceEventType.Error, 101, "generator \"" + generator + "\" is unknown");
+                Trace.TraceEvent(TraceEventType.Error, 101, "generator \"" + generator + "\" is unknown");
                 throw new ApplicationException("generator \"" + generator + "\" is unknown");
             }
             if (true) {

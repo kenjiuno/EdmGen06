@@ -45,8 +45,11 @@
             this.label7 = new System.Windows.Forms.Label();
             this.label6 = new System.Windows.Forms.Label();
             this.pwd = new System.Windows.Forms.ComboBox();
+            this.groupBox3 = new System.Windows.Forms.GroupBox();
+            this.tb = new System.Windows.Forms.RichTextBox();
             this.groupBox1.SuspendLayout();
             this.groupBox2.SuspendLayout();
+            this.groupBox3.SuspendLayout();
             this.SuspendLayout();
             // 
             // groupBox1
@@ -276,11 +279,32 @@
             this.pwd.Size = new System.Drawing.Size(759, 23);
             this.pwd.TabIndex = 5;
             // 
+            // groupBox3
+            // 
+            this.groupBox3.Controls.Add(this.tb);
+            this.groupBox3.Location = new System.Drawing.Point(12, 344);
+            this.groupBox3.Name = "groupBox3";
+            this.groupBox3.Size = new System.Drawing.Size(759, 167);
+            this.groupBox3.TabIndex = 6;
+            this.groupBox3.TabStop = false;
+            this.groupBox3.Text = "Log";
+            // 
+            // tb
+            // 
+            this.tb.BorderStyle = System.Windows.Forms.BorderStyle.None;
+            this.tb.Dock = System.Windows.Forms.DockStyle.Fill;
+            this.tb.Location = new System.Drawing.Point(3, 18);
+            this.tb.Name = "tb";
+            this.tb.Size = new System.Drawing.Size(753, 146);
+            this.tb.TabIndex = 0;
+            this.tb.Text = "";
+            // 
             // Form1
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(8F, 15F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(783, 366);
+            this.ClientSize = new System.Drawing.Size(783, 523);
+            this.Controls.Add(this.groupBox3);
             this.Controls.Add(this.pwd);
             this.Controls.Add(this.label6);
             this.Controls.Add(this.groupBox2);
@@ -293,6 +317,7 @@
             this.groupBox1.PerformLayout();
             this.groupBox2.ResumeLayout(false);
             this.groupBox2.PerformLayout();
+            this.groupBox3.ResumeLayout(false);
             this.ResumeLayout(false);
             this.PerformLayout();
 
@@ -322,6 +347,8 @@
         private System.Windows.Forms.Label label9;
         private System.Windows.Forms.Button EFModelGen;
         private System.Windows.Forms.Button EFCodeFirstGen;
+        private System.Windows.Forms.GroupBox groupBox3;
+        private System.Windows.Forms.RichTextBox tb;
     }
 }
 

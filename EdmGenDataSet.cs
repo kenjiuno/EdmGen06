@@ -33,36 +33,36 @@ namespace EdmGen06 {
         public void DataSet(String connectionString, String providerName, String modelName, String targetSchema) {
             String baseDir = Environment.CurrentDirectory;
 
-            trace.TraceEvent(TraceEventType.Information, 101, "Getting System.Data.Common.DbProviderFactory from '{0}'", providerName);
+            Trace.TraceEvent(TraceEventType.Information, 101, "Getting System.Data.Common.DbProviderFactory from '{0}'", providerName);
             var fac = System.Data.Common.DbProviderFactories.GetFactory(providerName);
             if (fac == null) throw new ApplicationException();
-            trace.TraceEvent(TraceEventType.Information, 101, fac.GetType().AssemblyQualifiedName);
-            trace.TraceEvent(TraceEventType.Information, 101, "Ok");
+            Trace.TraceEvent(TraceEventType.Information, 101, fac.GetType().AssemblyQualifiedName);
+            Trace.TraceEvent(TraceEventType.Information, 101, "Ok");
 
 
             using (var db = fac.CreateConnection()) {
-                trace.TraceEvent(TraceEventType.Information, 101, "Connecting");
+                Trace.TraceEvent(TraceEventType.Information, 101, "Connecting");
                 db.ConnectionString = connectionString;
                 db.Open();
-                trace.TraceEvent(TraceEventType.Information, 101, "Connected");
+                Trace.TraceEvent(TraceEventType.Information, 101, "Connected");
 
-                trace.TraceEvent(TraceEventType.Information, 101, "Getting System.Data.Entity.Core.Common.DbProviderServices from '{0}'", providerName);
+                Trace.TraceEvent(TraceEventType.Information, 101, "Getting System.Data.Entity.Core.Common.DbProviderServices from '{0}'", providerName);
                 var providerServices = ((IServiceProvider)fac).GetService(typeof(DbProviderServices)) as DbProviderServices;
                 if (providerServices == null) providerServices = DbProviderServices.GetProviderServices(db);
-                trace.TraceEvent(TraceEventType.Information, 101, providerServices.GetType().AssemblyQualifiedName);
-                trace.TraceEvent(TraceEventType.Information, 101, "Ok");
+                Trace.TraceEvent(TraceEventType.Information, 101, providerServices.GetType().AssemblyQualifiedName);
+                Trace.TraceEvent(TraceEventType.Information, 101, "Ok");
 
-                trace.TraceEvent(TraceEventType.Information, 101, "Get ProviderManifestToken");
+                Trace.TraceEvent(TraceEventType.Information, 101, "Get ProviderManifestToken");
                 var providerManifestToken = providerServices.GetProviderManifestToken(db);
-                trace.TraceEvent(TraceEventType.Information, 101, "Get ProviderManifest");
+                Trace.TraceEvent(TraceEventType.Information, 101, "Get ProviderManifest");
                 var providerManifest = providerServices.GetProviderManifest(providerManifestToken) as DbProviderManifest;
 
-                trace.TraceEvent(TraceEventType.Information, 101, "Get StoreSchemaDefinition");
+                Trace.TraceEvent(TraceEventType.Information, 101, "Get StoreSchemaDefinition");
                 var storeSchemaDefinition = providerManifest.GetInformation("StoreSchemaDefinition") as XmlReader;
-                trace.TraceEvent(TraceEventType.Information, 101, "Get StoreSchemaMapping");
+                Trace.TraceEvent(TraceEventType.Information, 101, "Get StoreSchemaMapping");
                 var storeSchemaMapping = providerManifest.GetInformation("StoreSchemaMapping") as XmlReader;
 
-                trace.TraceEvent(TraceEventType.Information, 101, "Write temporary ProviderManifest ssdl");
+                Trace.TraceEvent(TraceEventType.Information, 101, "Write temporary ProviderManifest ssdl");
                 XDocument tSsdl;
                 String fpssdl = Path.Combine(baseDir, "__" + providerName + ".ssdl");
                 String fpssdl2 = Path.Combine(baseDir, "__" + providerName + ".ssdl.xml");
@@ -72,7 +72,7 @@ namespace EdmGen06 {
                     tSsdl.Save(fpssdl2);
                 }
 
-                trace.TraceEvent(TraceEventType.Information, 101, "Write temporary ProviderManifest msl");
+                Trace.TraceEvent(TraceEventType.Information, 101, "Write temporary ProviderManifest msl");
                 XDocument tMsl;
                 String fpmsl = Path.Combine(baseDir, "__" + providerName + ".msl");
                 String fpmsl2 = Path.Combine(baseDir, "__" + providerName + ".msl.xml");
@@ -82,7 +82,7 @@ namespace EdmGen06 {
                     tMsl.Save(fpmsl2);
                 }
 
-                trace.TraceEvent(TraceEventType.Information, 101, "Checking ProviderManifest version.");
+                Trace.TraceEvent(TraceEventType.Information, 101, "Checking ProviderManifest version.");
                 XmlReader xrCsdl = null;
                 if (false) { }
                 else if (tSsdl.Element("{" + NS.SSDLv1 + "}" + "Schema") != null && tMsl.Element("{" + NS.MSLv1 + "}" + "Mapping") != null) {
@@ -94,7 +94,7 @@ namespace EdmGen06 {
 #else
                     xrCsdl = XmlReader.Create(new MemoryStream(Resources.ConceptualSchemaDefinition));
 #endif
-                    trace.TraceEvent(TraceEventType.Information, 101, "ProviderManifest v1");
+                    Trace.TraceEvent(TraceEventType.Information, 101, "ProviderManifest v1");
                 }
                 else if (tSsdl.Element("{" + NS.SSDLv3 + "}" + "Schema") != null && tMsl.Element("{" + NS.MSLv3 + "}" + "Mapping") != null) {
                     pCSDL = "{" + NS.CSDLv3 + "}";
@@ -105,14 +105,14 @@ namespace EdmGen06 {
 #else
                     xrCsdl = XmlReader.Create(new MemoryStream(Resources.ConceptualSchemaDefinitionVersion3));
 #endif
-                    trace.TraceEvent(TraceEventType.Information, 101, "ProviderManifest v3");
+                    Trace.TraceEvent(TraceEventType.Information, 101, "ProviderManifest v3");
                 }
                 else {
-                    trace.TraceEvent(TraceEventType.Error, 101, "ProviderManifest version unknown");
+                    Trace.TraceEvent(TraceEventType.Error, 101, "ProviderManifest version unknown");
                     throw new ApplicationException("ProviderManifest version unknown");
                 }
 
-                trace.TraceEvent(TraceEventType.Information, 101, "Write temporary ProviderManifest csdl");
+                Trace.TraceEvent(TraceEventType.Information, 101, "Write temporary ProviderManifest csdl");
                 String fpcsdl = Path.Combine(baseDir, "__" + providerName + ".csdl");
                 XDocument tCsdl;
                 {
@@ -126,9 +126,9 @@ namespace EdmGen06 {
                     + "Metadata=" + fpcsdl + "|" + fpssdl + "|" + fpmsl + ";"
                     ;
 
-                trace.TraceEvent(TraceEventType.Information, 101, "Getting SchemaInformation");
+                Trace.TraceEvent(TraceEventType.Information, 101, "Getting SchemaInformation");
                 using (var Context = new SchemaInformation(entityConnectionString)) {
-                    trace.TraceEvent(TraceEventType.Information, 101, "Ok");
+                    Trace.TraceEvent(TraceEventType.Information, 101, "Ok");
 
                     DataTable dtMetaDataCollections = db.GetSchema("MetaDataCollections");
                     DataTable dtDataSourceInformation = db.GetSchema("DataSourceInformation");

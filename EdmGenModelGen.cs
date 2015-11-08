@@ -34,61 +34,61 @@ namespace EdmGen06 {
             String fpconfig = Path.Combine(baseDir, modelName + ".App.config");
 
             if (false) { }
-            else if (yver == new Version(1, 0)) { xEDMX = "{" + NS.EDMXv1 + "}"; xSSDL = "{" + NS.SSDLv1 + "}"; xCSDL = "{" + NS.CSDLv1 + "}"; xMSL = "{" + NS.MSLv1 + "}"; trace.TraceEvent(TraceEventType.Information, 101, "ModelGen v1"); }
-            else if (yver == new Version(3, 0)) { xEDMX = "{" + NS.EDMXv3 + "}"; xSSDL = "{" + NS.SSDLv3 + "}"; xCSDL = "{" + NS.CSDLv3 + "}"; xMSL = "{" + NS.MSLv3 + "}"; trace.TraceEvent(TraceEventType.Information, 101, "ModelGen v3"); }
+            else if (yver == new Version(1, 0)) { xEDMX = "{" + NS.EDMXv1 + "}"; xSSDL = "{" + NS.SSDLv1 + "}"; xCSDL = "{" + NS.CSDLv1 + "}"; xMSL = "{" + NS.MSLv1 + "}"; Trace.TraceEvent(TraceEventType.Information, 101, "ModelGen v1"); }
+            else if (yver == new Version(3, 0)) { xEDMX = "{" + NS.EDMXv3 + "}"; xSSDL = "{" + NS.SSDLv3 + "}"; xCSDL = "{" + NS.CSDLv3 + "}"; xMSL = "{" + NS.MSLv3 + "}"; Trace.TraceEvent(TraceEventType.Information, 101, "ModelGen v3"); }
             else throw new NotSupportedException(String.Format("Version '{0}', from 1.0 3.0 ", yver));
 
-            trace.TraceEvent(TraceEventType.Information, 101, "Getting {1} from '{0}'", providerName, typeof(DbProviderFactory).FullName);
+            Trace.TraceEvent(TraceEventType.Information, 101, "Getting {1} from '{0}'", providerName, typeof(DbProviderFactory).FullName);
             var fac = System.Data.Common.DbProviderFactories.GetFactory(providerName);
             if (fac == null) throw new ApplicationException();
-            trace.TraceEvent(TraceEventType.Information, 101, fac.GetType().AssemblyQualifiedName);
-            trace.TraceEvent(TraceEventType.Information, 101, fac.GetType().Assembly.CodeBase);
-            trace.TraceEvent(TraceEventType.Information, 101, "Ok");
+            Trace.TraceEvent(TraceEventType.Information, 101, fac.GetType().AssemblyQualifiedName);
+            Trace.TraceEvent(TraceEventType.Information, 101, fac.GetType().Assembly.CodeBase);
+            Trace.TraceEvent(TraceEventType.Information, 101, "Ok");
 
             Type tyEFv6 = null;
 
             using (var db = fac.CreateConnection()) {
-                trace.TraceEvent(TraceEventType.Information, 101, "Connecting");
+                Trace.TraceEvent(TraceEventType.Information, 101, "Connecting");
                 db.ConnectionString = connectionString;
                 db.Open();
-                trace.TraceEvent(TraceEventType.Information, 101, "Connected");
+                Trace.TraceEvent(TraceEventType.Information, 101, "Connected");
 
-                trace.TraceEvent(TraceEventType.Information, 101, "Getting {1} from '{0}'", providerName, typeof(DbProviderServices).FullName);
+                Trace.TraceEvent(TraceEventType.Information, 101, "Getting {1} from '{0}'", providerName, typeof(DbProviderServices).FullName);
                 DbProviderServices providerServices = null;
                 if (providerServices == null) {
                     if (typeProviderServices != null) {
                         var ty = Type.GetType(typeProviderServices);
                         if (ty != null) providerServices = (DbProviderServices)ty.InvokeMember("Instance", BindingFlags.Public | BindingFlags.Static | BindingFlags.GetProperty, null, null, new object[0]);
-                        if (providerServices != null) trace.TraceEvent(TraceEventType.Information, 101, " from Instance property");
+                        if (providerServices != null) Trace.TraceEvent(TraceEventType.Information, 101, " from Instance property");
                     }
                 }
 #if !ENTITIES6
                 if (providerServices == null) {
                     providerServices = ((IServiceProvider)fac).GetService(typeof(DbProviderServices)) as DbProviderServices;
-                    if (providerServices != null) trace.TraceEvent(TraceEventType.Information, 101, " from IServiceProvider.GetService method");
+                    if (providerServices != null) Trace.TraceEvent(TraceEventType.Information, 101, " from IServiceProvider.GetService method");
                 }
 #endif
                 if (providerServices == null) {
                     providerServices = DbProviderServices.GetProviderServices(db);
-                    if (providerServices != null) trace.TraceEvent(TraceEventType.Information, 101, " from DbProviderServices.GetProviderServices method");
+                    if (providerServices != null) Trace.TraceEvent(TraceEventType.Information, 101, " from DbProviderServices.GetProviderServices method");
                 }
-                trace.TraceEvent(TraceEventType.Information, 101, providerServices.GetType().AssemblyQualifiedName);
-                trace.TraceEvent(TraceEventType.Information, 101, providerServices.GetType().Assembly.CodeBase);
-                trace.TraceEvent(TraceEventType.Information, 101, "Ok");
+                Trace.TraceEvent(TraceEventType.Information, 101, providerServices.GetType().AssemblyQualifiedName);
+                Trace.TraceEvent(TraceEventType.Information, 101, providerServices.GetType().Assembly.CodeBase);
+                Trace.TraceEvent(TraceEventType.Information, 101, "Ok");
 
                 tyEFv6 = providerServices.GetType();
 
-                trace.TraceEvent(TraceEventType.Information, 101, "Get ProviderManifestToken");
+                Trace.TraceEvent(TraceEventType.Information, 101, "Get ProviderManifestToken");
                 var providerManifestToken = providerServices.GetProviderManifestToken(db);
-                trace.TraceEvent(TraceEventType.Information, 101, "Get ProviderManifest");
+                Trace.TraceEvent(TraceEventType.Information, 101, "Get ProviderManifest");
                 var providerManifest = providerServices.GetProviderManifest(providerManifestToken) as DbProviderManifest;
 
-                trace.TraceEvent(TraceEventType.Information, 101, "Get StoreSchemaDefinition");
+                Trace.TraceEvent(TraceEventType.Information, 101, "Get StoreSchemaDefinition");
                 var storeSchemaDefinition = providerManifest.GetInformation("StoreSchemaDefinition") as XmlReader;
-                trace.TraceEvent(TraceEventType.Information, 101, "Get StoreSchemaMapping");
+                Trace.TraceEvent(TraceEventType.Information, 101, "Get StoreSchemaMapping");
                 var storeSchemaMapping = providerManifest.GetInformation("StoreSchemaMapping") as XmlReader;
 
-                trace.TraceEvent(TraceEventType.Information, 101, "Write temporary ProviderManifest ssdl");
+                Trace.TraceEvent(TraceEventType.Information, 101, "Write temporary ProviderManifest ssdl");
                 XDocument tSsdl;
                 String fpssdl = Path.Combine(baseDir, "__" + providerName + ".ssdl");
                 String fpssdl2 = Path.Combine(baseDir, "__" + providerName + ".ssdl.xml");
@@ -98,7 +98,7 @@ namespace EdmGen06 {
                     tSsdl.Save(fpssdl2);
                 }
 
-                trace.TraceEvent(TraceEventType.Information, 101, "Write temporary ProviderManifest msl");
+                Trace.TraceEvent(TraceEventType.Information, 101, "Write temporary ProviderManifest msl");
                 XDocument tMsl;
                 String fpmsl = Path.Combine(baseDir, "__" + providerName + ".msl");
                 String fpmsl2 = Path.Combine(baseDir, "__" + providerName + ".msl.xml");
@@ -108,7 +108,7 @@ namespace EdmGen06 {
                     tMsl.Save(fpmsl2);
                 }
 
-                trace.TraceEvent(TraceEventType.Information, 101, "Checking ProviderManifest version.");
+                Trace.TraceEvent(TraceEventType.Information, 101, "Checking ProviderManifest version.");
                 XmlReader xrCsdl = null;
                 if (false) { }
                 else if (tSsdl.Element("{" + NS.SSDLv1 + "}" + "Schema") != null && tMsl.Element("{" + NS.MSLv1 + "}" + "Mapping") != null) {
@@ -120,7 +120,7 @@ namespace EdmGen06 {
 #else
                     xrCsdl = XmlReader.Create(new MemoryStream(Resources.ConceptualSchemaDefinition));
 #endif
-                    trace.TraceEvent(TraceEventType.Information, 101, "ProviderManifest v1");
+                    Trace.TraceEvent(TraceEventType.Information, 101, "ProviderManifest v1");
                 }
                 else if (tSsdl.Element("{" + NS.SSDLv3 + "}" + "Schema") != null && tMsl.Element("{" + NS.MSLv3 + "}" + "Mapping") != null) {
                     pCSDL = "{" + NS.CSDLv3 + "}";
@@ -131,14 +131,14 @@ namespace EdmGen06 {
 #else
                     xrCsdl = XmlReader.Create(new MemoryStream(Resources.ConceptualSchemaDefinitionVersion3));
 #endif
-                    trace.TraceEvent(TraceEventType.Information, 101, "ProviderManifest v3");
+                    Trace.TraceEvent(TraceEventType.Information, 101, "ProviderManifest v3");
                 }
                 else {
-                    trace.TraceEvent(TraceEventType.Error, 101, "ProviderManifest version unknown");
+                    Trace.TraceEvent(TraceEventType.Error, 101, "ProviderManifest version unknown");
                     throw new ApplicationException("ProviderManifest version unknown");
                 }
 
-                trace.TraceEvent(TraceEventType.Information, 101, "Write temporary ProviderManifest csdl");
+                Trace.TraceEvent(TraceEventType.Information, 101, "Write temporary ProviderManifest csdl");
                 String fpcsdl = Path.Combine(baseDir, "__" + providerName + ".csdl");
                 XDocument tCsdl;
                 {
@@ -191,9 +191,9 @@ namespace EdmGen06 {
                         )
                 );
 
-                trace.TraceEvent(TraceEventType.Information, 101, "Getting SchemaInformation");
+                Trace.TraceEvent(TraceEventType.Information, 101, "Getting SchemaInformation");
                 using (var Context = new SchemaInformation(entityConnectionString)) {
-                    trace.TraceEvent(TraceEventType.Information, 101, "Ok");
+                    Trace.TraceEvent(TraceEventType.Information, 101, "Ok");
 
                     String ssdlNs = nut.SsdlNs();
                     XElement ssdlSchema = new XElement(xSSDL + "Schema"
@@ -230,41 +230,41 @@ namespace EdmGen06 {
                         );
                     mslMapping.Add(mslEntityContainerMapping);
 
-                    trace.TraceEvent(TraceEventType.Information, 101, "Loading all Tables");
-                    trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.Tables.ToArray().Length));
+                    Trace.TraceEvent(TraceEventType.Information, 101, "Loading all Tables");
+                    Trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.Tables.ToArray().Length));
 
-                    trace.TraceEvent(TraceEventType.Information, 101, "Loading all TableForeignKeys");
-                    trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.TableForeignKeys.ToArray().Length));
+                    Trace.TraceEvent(TraceEventType.Information, 101, "Loading all TableForeignKeys");
+                    Trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.TableForeignKeys.ToArray().Length));
 
-                    trace.TraceEvent(TraceEventType.Information, 101, "Loading all TableColumns");
-                    trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.TableColumns.ToArray().Length));
+                    Trace.TraceEvent(TraceEventType.Information, 101, "Loading all TableColumns");
+                    Trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.TableColumns.ToArray().Length));
 
-                    trace.TraceEvent(TraceEventType.Information, 101, "Loading all TableConstraints");
-                    trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.TableConstraints.ToArray().Length));
+                    Trace.TraceEvent(TraceEventType.Information, 101, "Loading all TableConstraints");
+                    Trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.TableConstraints.ToArray().Length));
 
-                    trace.TraceEvent(TraceEventType.Information, 101, "Loading all Views");
-                    trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.Views.ToArray().Length));
+                    Trace.TraceEvent(TraceEventType.Information, 101, "Loading all Views");
+                    Trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.Views.ToArray().Length));
 
-                    trace.TraceEvent(TraceEventType.Information, 101, "Loading all ViewForeignKeys");
-                    trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.ViewForeignKeys.ToArray().Length));
+                    Trace.TraceEvent(TraceEventType.Information, 101, "Loading all ViewForeignKeys");
+                    Trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.ViewForeignKeys.ToArray().Length));
 
-                    trace.TraceEvent(TraceEventType.Information, 101, "Loading all ViewColumns");
-                    trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.ViewColumns.ToArray().Length));
+                    Trace.TraceEvent(TraceEventType.Information, 101, "Loading all ViewColumns");
+                    Trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.ViewColumns.ToArray().Length));
 
-                    trace.TraceEvent(TraceEventType.Information, 101, "Loading all ViewConstraints");
-                    trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.ViewConstraints.ToArray().Length));
+                    Trace.TraceEvent(TraceEventType.Information, 101, "Loading all ViewConstraints");
+                    Trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.ViewConstraints.ToArray().Length));
 
-                    trace.TraceEvent(TraceEventType.Information, 101, "Loading all Functions");
-                    trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.Functions.ToArray().Length));
+                    Trace.TraceEvent(TraceEventType.Information, 101, "Loading all Functions");
+                    Trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.Functions.ToArray().Length));
 
-                    trace.TraceEvent(TraceEventType.Information, 101, "Loading all FunctionParameters");
-                    trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.FunctionParameters.ToArray().Length));
+                    Trace.TraceEvent(TraceEventType.Information, 101, "Loading all FunctionParameters");
+                    Trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.FunctionParameters.ToArray().Length));
 
-                    trace.TraceEvent(TraceEventType.Information, 101, "Loading all Procedures");
-                    trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.Procedures.ToArray().Length));
+                    Trace.TraceEvent(TraceEventType.Information, 101, "Loading all Procedures");
+                    Trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.Procedures.ToArray().Length));
 
-                    trace.TraceEvent(TraceEventType.Information, 101, "Loading all ProcedureParameters");
-                    trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.ProcedureParameters.ToArray().Length));
+                    Trace.TraceEvent(TraceEventType.Information, 101, "Loading all ProcedureParameters");
+                    Trace.TraceEvent(TraceEventType.Verbose, 101, String.Format("{0:#,##0} items", Context.ProcedureParameters.ToArray().Length));
 
                     var allTableOrView = Context.Tables.Cast<TableOrView>().Union(Context.Views.Cast<TableOrView>()).ToArray();
 
@@ -292,7 +292,7 @@ namespace EdmGen06 {
                     }
 
                     foreach (var dbt in processTableOrView) {
-                        trace.TraceEvent(TraceEventType.Information, 101, "{2}: {0}.{1}", dbt.SchemaName, dbt.Name, (dbt is Table) ? "Table" : "View");
+                        Trace.TraceEvent(TraceEventType.Information, 101, "{2}: {0}.{1}", dbt.SchemaName, dbt.Name, (dbt is Table) ? "Table" : "View");
 
                         XElement ssdlEntitySet = new XElement(xSSDL + "EntitySet"
                             , new XAttribute("Name", nut.SsdlEntitySet(dbt))
@@ -338,7 +338,7 @@ namespace EdmGen06 {
                         bool hasKey = false; // http://social.msdn.microsoft.com/Forums/en-US/94c227d3-3764-45b2-8c6b-e45b6cc8e169/keyless-object-workaround
                         bool hasId = dbt.Columns.Any(p => p.IsIdentity || p.Constraints.OfType<PrimaryKeyConstraint>().Any());
                         foreach (var dbc in dbt.Columns) {
-                            trace.TraceEvent(TraceEventType.Information, 101, " TableColumn: {0}", dbc.Name);
+                            Trace.TraceEvent(TraceEventType.Information, 101, " TableColumn: {0}", dbc.Name);
 
                             bool isIdGen = dbc.IsIdentity;
                             bool isId = isIdGen || dbc.Constraints.OfType<PrimaryKeyConstraint>().Any() || (hasId ? false : !dbc.IsNullable);
@@ -429,7 +429,7 @@ namespace EdmGen06 {
                     }
 
                     foreach (var dbco in Context.TableConstraints.OfType<ForeignKeyConstraint>()) {
-                        trace.TraceEvent(TraceEventType.Information, 101, "Constraint: {0}", dbco.Name);
+                        Trace.TraceEvent(TraceEventType.Information, 101, "Constraint: {0}", dbco.Name);
 
                         // ssdl
                         var ssdlAssociationSet = new XElement(xSSDL + "AssociationSet"
@@ -486,7 +486,7 @@ namespace EdmGen06 {
 
                     if (xSSDL != NS.SSDLv1)
                         foreach (var dbr in Context.Functions.Cast<Routine>().Union(Context.Procedures.Cast<Routine>())) {
-                            trace.TraceEvent(TraceEventType.Information, 101, "{2}: {0}.{1}", dbr.SchemaName, dbr.Name, (dbr is Function) ? "Function" : "Procedure");
+                            Trace.TraceEvent(TraceEventType.Information, 101, "{2}: {0}.{1}", dbr.SchemaName, dbr.Name, (dbr is Function) ? "Function" : "Procedure");
 
                             if (dbr.SchemaName != targetSchema) continue;
 
@@ -547,7 +547,7 @@ namespace EdmGen06 {
                             }
 
                             foreach (var dbfp in dbr.Parameters) {
-                                trace.TraceEvent(TraceEventType.Information, 101, " Parameter: {0}", dbfp.Name);
+                                Trace.TraceEvent(TraceEventType.Information, 101, " Parameter: {0}", dbfp.Name);
 
                                 // ssdl
 
@@ -716,18 +716,18 @@ namespace EdmGen06 {
             , XElement ssdlAssociationSet, XElement ssdlAssociation, XElement ssdlReferentialConstraint
             , XElement csdlAssociationSet, XElement csdlAssociation, XElement csdlReferentialConstraint
         ) {
-            trace.TraceEvent(TraceEventType.Verbose, 101, "Addfkc: ");
-            trace.TraceEvent(TraceEventType.Verbose, 101, "  xSSDL -> {0}", xSSDL);
-            trace.TraceEvent(TraceEventType.Verbose, 101, "  nut -> {0}", nut);
-            trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfk -> {0}", dbfk);
-            trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfkc              -> {0}", dbfkc);
-            trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfkc.Parent       -> {0}", dbfkc.Parent);
-            trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfkc.Parent.Id    -> {0}", dbfkc.Parent.Id);
-            trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfkc.Parent.Name  -> {0}", dbfkc.Parent.Name);
-            trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfkc2             -> {0}", dbfkc2);
-            trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfkc2.Parent      -> {0}", dbfkc2.Parent);
-            trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfkc2.Parent.Id   -> {0}", dbfkc2.Parent.Id);
-            trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfkc2.Parent.Name -> {0}", dbfkc2.Parent.Name);
+            Trace.TraceEvent(TraceEventType.Verbose, 101, "Addfkc: ");
+            Trace.TraceEvent(TraceEventType.Verbose, 101, "  xSSDL -> {0}", xSSDL);
+            Trace.TraceEvent(TraceEventType.Verbose, 101, "  nut -> {0}", nut);
+            Trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfk -> {0}", dbfk);
+            Trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfkc              -> {0}", dbfkc);
+            Trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfkc.Parent       -> {0}", dbfkc.Parent);
+            Trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfkc.Parent.Id    -> {0}", dbfkc.Parent.Id);
+            Trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfkc.Parent.Name  -> {0}", dbfkc.Parent.Name);
+            Trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfkc2             -> {0}", dbfkc2);
+            Trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfkc2.Parent      -> {0}", dbfkc2.Parent);
+            Trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfkc2.Parent.Id   -> {0}", dbfkc2.Parent.Id);
+            Trace.TraceEvent(TraceEventType.Verbose, 101, "  dbfkc2.Parent.Name -> {0}", dbfkc2.Parent.Name);
 
             // ssdl
             var ssdlasEnd = new XElement(xSSDL + "End"
