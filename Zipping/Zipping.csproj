@@ -68,6 +68,11 @@
     <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv60" SourceFiles="..\EFv60\bin\$(Configuration)\Npgsql.EntityFramework.dll" />
     <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv60" SourceFiles="..\EFv60\bin\$(Configuration)\Mono.Security.dll" />
     <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv60" SourceFiles="..\EFv60\bin\$(Configuration)\GenEFv6.bat" />
+    
+    <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv60" SourceFiles="..\EdmGen06UI\bin\$(Configuration)\EdmGen06UI.exe" />
+    <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv60" SourceFiles="..\EdmGen06UI\bin\$(Configuration)\EdmGen06UI.exe.config" />
+    <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv60" SourceFiles="..\EdmGen06UI\bin\$(Configuration)\Npgsql.dll" />
+    <Copy DestinationFolder="$(SolutionDir)$(Serial)\EFv60" SourceFiles="..\EdmGen06UI\bin\$(Configuration)\EntityFramework6.Npgsql.dll" />
 
     <Copy DestinationFolder="$(SolutionDir)$(Serial)" SourceFiles="..\README.odt" />
   </Target>
