@@ -110,7 +110,7 @@ namespace EdmGen06 {
                             EntitySet = vEntityContainer.Elements(nsCSDL + "EntitySet").Select(
                                 vEntitySet => new {
                                     Name = vEntitySet.Attribute("Name").Value,
-                                    Schema = FindSsdlSchema(
+                                    Ssdl = FindSsdl(
                                         vEntitySet.Attribute("Name").Value,
                                         MappingSchema,
                                         MSLv3,
@@ -134,7 +134,12 @@ namespace EdmGen06 {
             return al.IndexOf(vProperty);
         }
 
-        private object FindSsdlSchema(
+        public class SsdlEntitySet {
+            public String Schema { get; set; }
+            public String StoreEntitySet { get; set; }
+        }
+
+        private SsdlEntitySet FindSsdl(
             String entitySet,
             XElement MappingSchema,
             XNamespace nsCS,
@@ -151,10 +156,13 @@ namespace EdmGen06 {
 
             var elEntitySet = SsdlSchema.Element(nsSSDL + "EntityContainer")
                 .Elements(nsSSDL + "EntitySet")
-                .First(q => q.Attribute("Name").Value.Equals(entitySet))
+                .First(q => q.Attribute("Name").Value.Equals(StoreEntitySet))
                 ;
 
-            return elEntitySet.Attribute("Schema").Value;
+            return new SsdlEntitySet {
+                Schema = elEntitySet.Attribute("Schema").Value,
+                StoreEntitySet = StoreEntitySet,
+            };
         }
 
         Assoc FindNavigationProperty(SortedDictionary<string, Assoc> dAssoc, XElement vNavigationProperty, bool fromRole) {

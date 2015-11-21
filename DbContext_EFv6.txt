@@ -16,12 +16,12 @@ namespace @Model.Namespace {
     }
 
 @Each.EntitySet
-    public virtual DbSet<@Current.EntityType> @Current.Name { get; set; }
+    public virtual DbSet<@Current.EntityType.Name> @Current.Name { get; set; }
 @EndEach
   }
 
 @Each.EntitySet
-  [Table("@Current.Name", Schema = "@Current.Schema")]
+  [Table("@Current.Ssdl.StoreEntitySet", Schema = "@Current.Ssdl.Schema")]
   public class @Current.Name {
     public @Current.Name() {
 @Each.EntityType.NavigationProperty
