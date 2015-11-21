@@ -29,15 +29,17 @@ namespace @Model.Namespace {
       this.@Current.Name = new HashSet<@Current.ToRole.Type>();
 @EndIf
 @EndEach
+
     }
 
 @Each.EntityType.Property
-@If.Identity
-    [Key][Column(Order = @Current.Order)]
+@If.Key.IsKey
+    [Key]
 @EndIf
+    [Column(Name = "@Current.Ssdl.Name", Order = @Current.Order)]
     public @Current.TypeSigned @Current.Name { get; set; }
-@EndEach
 
+@EndEach
 @Each.EntityType.NavigationProperty
 @If.FromRole.Many
     public virtual ICollection<@Current.ToRole.Type> @Current.Name { get; set; }

@@ -89,7 +89,16 @@ namespace EdmGen06 {
                                 TypeSigned = CheckTypeSigned(vProperty.Attribute("Type").Value, CheckNullable(vProperty.Attribute("Nullable"))),
                                 Nullable = CheckNullable(vProperty.Attribute("Nullable")),
                                 Identity = CheckIdentity(vProperty.Attribute(nsAnno + "StoreGeneratedPattern")),
-                                Order = GetOrder(vProperty),
+                                Key = CheckKey(vProperty),
+                                Order = CheckOrder(vProperty),
+                                Ssdl = FindSsdlColumn(
+                                        vEntityType.Attribute("Name").Value,
+                                        vProperty.Attribute("Name").Value,
+                                        MappingSchema,
+                                        MSLv3,
+                                        SsdlSchema,
+                                        SSDLv3
+                                        ),
                             }
                         ),
                         NavigationProperty = vEntityType.Elements(nsCSDL + "NavigationProperty").Select(
@@ -110,7 +119,7 @@ namespace EdmGen06 {
                             EntitySet = vEntityContainer.Elements(nsCSDL + "EntitySet").Select(
                                 vEntitySet => new {
                                     Name = vEntitySet.Attribute("Name").Value,
-                                    Ssdl = FindSsdl(
+                                    Ssdl = FindSsdlEntitySet(
                                         vEntitySet.Attribute("Name").Value,
                                         MappingSchema,
                                         MSLv3,
@@ -129,9 +138,52 @@ namespace EdmGen06 {
             }
         }
 
-        private int GetOrder(XElement vProperty) {
+        private int CheckOrder(XElement vProperty) {
             var al = vProperty.Parent.Elements(vProperty.Name).ToList();
             return al.IndexOf(vProperty);
+        }
+
+        public class SsdlColumn {
+            public String Name { get; set; }
+        }
+
+        private SsdlColumn FindSsdlColumn(
+            String entityType,
+            String name,
+            XElement MappingSchema,
+            XNamespace nsCS,
+            XElement SsdlSchema,
+            XNamespace nsSSDL
+        ) {
+            var elProperty = MappingSchema.Element(nsCS + "EntityContainerMapping")
+                .Elements(nsCS + "EntitySetMapping")
+                .Elements(nsCS + "EntityTypeMapping")
+                .First(q => q.Attribute("TypeName").Value.Split('.')[1].Equals(entityType))
+                .Element(nsCS + "MappingFragment")
+                .Elements(nsCS + "ScalarProperty")
+                .First(q => q.Attribute("Name").Value.Equals(name))
+                ;
+
+            return new SsdlColumn {
+                Name = elProperty.Attribute("ColumnName").Value,
+            };
+        }
+
+        public class CsdlPropKey {
+            public bool IsKey { get; set; }
+            public int Order { get; set; }
+        }
+
+        private CsdlPropKey CheckKey(XElement vProperty) {
+            var elKey = vProperty.Parent.Element(vProperty.Name.Namespace + "Key");
+            if (elKey != null) {
+                var PropertyRef = elKey.Elements(vProperty.Name.Namespace + "PropertyRef");
+                var PropertyRef1 = PropertyRef.FirstOrDefault(q => q.Attribute("Name").Value.Equals(vProperty.Attribute("Name").Value));
+                if (PropertyRef1 != null) {
+                    return new CsdlPropKey { IsKey = true, Order = PropertyRef.ToList().IndexOf(PropertyRef1) };
+                }
+            }
+            return new CsdlPropKey { Order = -1, };
         }
 
         public class SsdlEntitySet {
@@ -139,7 +191,7 @@ namespace EdmGen06 {
             public String StoreEntitySet { get; set; }
         }
 
-        private SsdlEntitySet FindSsdl(
+        private SsdlEntitySet FindSsdlEntitySet(
             String entitySet,
             XElement MappingSchema,
             XNamespace nsCS,
