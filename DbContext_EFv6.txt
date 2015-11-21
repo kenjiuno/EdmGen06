@@ -19,27 +19,26 @@ namespace @Model.Namespace {
     public virtual DbSet<@Current.EntityType> @Current.Name { get; set; }
 @EndEach
   }
-@EndEach
 
-@Each.EntityType
+@Each.EntitySet
   [Table("@Current.Name", Schema = "@Current.Schema")]
   public class @Current.Name {
     public @Current.Name() {
-@Each.NavigationProperty
+@Each.EntityType.NavigationProperty
 @If.FromRole.Many
       this.@Current.Name = new HashSet<@Current.ToRole.Type>();
 @EndIf
 @EndEach
     }
 
-@Each.Property
+@Each.EntityType.Property
 @If.Identity
     [Key][Column(Order = @Current.Order)]
 @EndIf
     public @Current.TypeSigned @Current.Name { get; set; }
 @EndEach
 
-@Each.NavigationProperty
+@Each.EntityType.NavigationProperty
 @If.FromRole.Many
     public virtual ICollection<@Current.ToRole.Type> @Current.Name { get; set; }
 @EndIf
@@ -49,5 +48,6 @@ namespace @Model.Namespace {
 @EndEach
   }
 
+@EndEach
 @EndEach
 }

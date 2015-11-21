@@ -34,15 +34,26 @@ namespace EdmGen06 {
 
         }
 
+        XNamespace EDMXv3 { get { return XNamespace.Get(NS.EDMXv3); } }
+        XNamespace CSDLv3 { get { return XNamespace.Get(NS.CSDLv3); } }
+        XNamespace SSDLv3 { get { return XNamespace.Get(NS.SSDLv3); } }
+        XNamespace MSLv3 { get { return XNamespace.Get(NS.MSLv3); } }
+
         public void CodeFirstGen(String fpEdmx, String fpcs, String generator) {
             XDocument edmx = XDocument.Load(fpEdmx);
-            var EDMXv3 = XNamespace.Get(NS.EDMXv3);
-            var CSDLv3 = XNamespace.Get(NS.CSDLv3);
             XNamespace nsCSDL = CSDLv3;
             XElement Schema = edmx.Element(EDMXv3 + "Edmx")
                 .Element(EDMXv3 + "Runtime")
                 .Element(EDMXv3 + "ConceptualModels")
                 .Element(CSDLv3 + "Schema");
+            XElement SsdlSchema = edmx.Element(EDMXv3 + "Edmx")
+                .Element(EDMXv3 + "Runtime")
+                .Element(EDMXv3 + "StorageModels")
+                .Element(SSDLv3 + "Schema");
+            XElement MappingSchema = edmx.Element(EDMXv3 + "Edmx")
+                .Element(EDMXv3 + "Runtime")
+                .Element(EDMXv3 + "Mappings")
+                .Element(MSLv3 + "Mapping");
             String template = null;
             if (false) { }
             else if ("DbContext.EFv6".Equals(generator)) template = Resources.DbContext_EFv6;
@@ -68,6 +79,29 @@ namespace EdmGen06 {
                     alAssoc.Add(assoc12);
                 }
                 var nsAnno = XNamespace.Get("http://schemas.microsoft.com/ado/2009/02/edm/annotation");
+                var EntityTypes = Schema.Elements(nsCSDL + "EntityType").Select(
+                    vEntityType => new {
+                        Name = vEntityType.Attribute("Name").Value,
+                        Property = vEntityType.Elements(nsCSDL + "Property").Select(
+                            vProperty => new {
+                                Name = vProperty.Attribute("Name").Value,
+                                Type = vProperty.Attribute("Type").Value,
+                                TypeSigned = CheckTypeSigned(vProperty.Attribute("Type").Value, CheckNullable(vProperty.Attribute("Nullable"))),
+                                Nullable = CheckNullable(vProperty.Attribute("Nullable")),
+                                Identity = CheckIdentity(vProperty.Attribute(nsAnno + "StoreGeneratedPattern")),
+                                Order = GetOrder(vProperty),
+                            }
+                        ),
+                        NavigationProperty = vEntityType.Elements(nsCSDL + "NavigationProperty").Select(
+                            vNavigationProperty => new {
+                                EntityTypeName = vEntityType.Attribute("Name").Value,
+                                Name = vNavigationProperty.Attribute("Name").Value,
+                                FromRole = FindNavigationProperty(dAssoc, vNavigationProperty, true),
+                                ToRole = FindNavigationProperty(dAssoc, vNavigationProperty, false),
+                            }
+                        )
+                    }
+                );
                 var Model = new {
                     Namespace = Schema.Attribute("Namespace").Value,
                     EntityContainer = Schema.Elements(nsCSDL + "EntityContainer").Select(
@@ -76,37 +110,51 @@ namespace EdmGen06 {
                             EntitySet = vEntityContainer.Elements(nsCSDL + "EntitySet").Select(
                                 vEntitySet => new {
                                     Name = vEntitySet.Attribute("Name").Value,
-                                    EntityType = vEntitySet.Attribute("EntityType").Value.Split('.')[1],
+                                    Schema = FindSsdlSchema(
+                                        vEntitySet.Attribute("Name").Value,
+                                        MappingSchema,
+                                        MSLv3,
+                                        SsdlSchema,
+                                        SSDLv3
+                                        ),
+                                    EntityType = EntityTypes.First(q => q.Name == vEntitySet.Attribute("EntityType").Value.Split('.')[1]),
                                 }
                             ),
                         }
                     ),
-                    EntityType = Schema.Elements(nsCSDL + "EntityType").Select(
-                        vEntityType => new {
-                            Name = vEntityType.Attribute("Name").Value,
-                            Property = vEntityType.Elements(nsCSDL + "Property").Select(
-                                vProperty => new {
-                                    Name = vProperty.Attribute("Name").Value,
-                                    Type = vProperty.Attribute("Type").Value,
-                                    TypeSigned = CheckTypeSigned(vProperty.Attribute("Type").Value, CheckNullable(vProperty.Attribute("Nullable"))),
-                                    Nullable = CheckNullable(vProperty.Attribute("Nullable")),
-                                    Identity = CheckIdentity(vProperty.Attribute(nsAnno + "StoreGeneratedPattern")),
-                                }
-                            ),
-                            NavigationProperty = vEntityType.Elements(nsCSDL + "NavigationProperty").Select(
-                                vNavigationProperty => new {
-                                    EntityTypeName = vEntityType.Attribute("Name").Value,
-                                    Name = vNavigationProperty.Attribute("Name").Value,
-                                    FromRole = FindNavigationProperty(dAssoc, vNavigationProperty, true),
-                                    ToRole = FindNavigationProperty(dAssoc, vNavigationProperty, false),
-                                }
-                            )
-                        }
-                    ),
+                    EntityType = EntityTypes,
                     Association = alAssoc,
                 };
                 File.WriteAllText(fpcs, new UtFakeSSVE(template, Model).Generated);
             }
+        }
+
+        private int GetOrder(XElement vProperty) {
+            var al = vProperty.Parent.Elements(vProperty.Name).ToList();
+            return al.IndexOf(vProperty);
+        }
+
+        private object FindSsdlSchema(
+            String entitySet,
+            XElement MappingSchema,
+            XNamespace nsCS,
+            XElement SsdlSchema,
+            XNamespace nsSSDL
+        ) {
+            var elMappingFragment = MappingSchema.Element(nsCS + "EntityContainerMapping")
+                .Elements(nsCS + "EntitySetMapping")
+                .First(q => q.Attribute("Name").Value.Equals(entitySet))
+                .Element(nsCS + "EntityTypeMapping")
+                .Element(nsCS + "MappingFragment")
+                ;
+            var StoreEntitySet = elMappingFragment.Attribute("StoreEntitySet").Value;
+
+            var elEntitySet = SsdlSchema.Element(nsSSDL + "EntityContainer")
+                .Elements(nsSSDL + "EntitySet")
+                .First(q => q.Attribute("Name").Value.Equals(entitySet))
+                ;
+
+            return elEntitySet.Attribute("Schema").Value;
         }
 
         Assoc FindNavigationProperty(SortedDictionary<string, Assoc> dAssoc, XElement vNavigationProperty, bool fromRole) {
