@@ -124,6 +124,15 @@
   <data name="ConceptualSchemaDefinitionVersion3" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\conceptualschemadefinitionversion3.csdl;System.Byte[], mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </data>
+  <data name="DbContext_EFv5" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\DbContext_EFv5.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  </data>
+  <data name="DbContext_EFv6" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\DbContext_EFv6.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  </data>
+  <data name="ObjectContext" type="System.Resources.ResXFileRef, System.Windows.Forms">
+    <value>..\ObjectContext.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
+  </data>
   <data name="Usage" type="System.Resources.ResXFileRef, System.Windows.Forms">
     <value>..\usage.txt;System.String, mscorlib, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089;utf-8</value>
   </data>

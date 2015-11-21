@@ -56,7 +56,7 @@ namespace EdmGen06 {
                 SortedDictionary<string, Assoc> dAssoc = new SortedDictionary<string, Assoc>();
                 List<Assoc> alAssoc = new List<Assoc>();
                 var Alias = Schema.Attribute("Alias").Value;
-                var Namespace= Schema.Attribute("Namespace").Value;
+                var Namespace = Schema.Attribute("Namespace").Value;
                 foreach (var Association in Schema.Elements(nsCSDL + "Association")) {
                     var Name = Association.Attribute("Name").Value;
                     var assoc12 = new Assoc(Association, nsCSDL, true);
@@ -169,6 +169,8 @@ namespace EdmGen06 {
         }
 
         String CheckTypeSigned(String edmType, bool nullable) {
+            if (edmType == "Time")
+                edmType = "TimeSpan";
             if (nullable && "/Boolean/Int16/Int32/Int64/Guid/Single/Double/Decimal/DateTime/DateTimeOffset/Time/".IndexOf("/" + edmType + "/") >= 0)
                 edmType += "?";
             if (edmType == "Binary")

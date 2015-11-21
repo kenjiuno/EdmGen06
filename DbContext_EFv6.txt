@@ -1,4 +1,6 @@
 ﻿using System;
+using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations.Schema;
 using System.Data.Entity;
 using System.Data.Entity.Infrastructure;
 
@@ -20,7 +22,7 @@ namespace @Model.Namespace {
 @EndEach
 
 @Each.EntityType
-  [Table("@Current.Name")]
+  [Table("@Current.Name", Schema = "@Current.Schema")]
   public class @Current.Name {
     public @Current.Name() {
 @Each.NavigationProperty
@@ -32,7 +34,7 @@ namespace @Model.Namespace {
 
 @Each.Property
 @If.Identity
-    [Key]
+    [Key][Column(Order = @Current.Order)]
 @EndIf
     public @Current.TypeSigned @Current.Name { get; set; }
 @EndEach
