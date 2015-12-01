@@ -46,7 +46,8 @@ namespace EdmGen06 {
                 new EdmGenClassGen().CodeFirstGen(
                     args[1],
                     args[2],
-                    args[3]
+                    args[3],
+                    "Host=xxx;Port=xxx;Username=xxx;Password=xxx;Database=xxx;"
                     );
                 return;
             }

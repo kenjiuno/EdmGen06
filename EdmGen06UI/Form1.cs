@@ -52,7 +52,7 @@ namespace EdmGen06UI {
         private void EFCodeFirstGen_Click(object sender, EventArgs e) {
             var p = new EdmGen06.EdmGenClassGen();
             p.Trace.Listeners.Add(new TL { tb = tb });
-            p.CodeFirstGen(input_edmx.Text, output_cs.Text, generator.Text);
+            p.CodeFirstGen(input_edmx.Text, output_cs.Text, generator.Text, connectionString.Text);
 
             MessageBox.Show(this, "Done.\n\n" + output_cs.Text + " generated", Text, MessageBoxButtons.OK, MessageBoxIcon.Information);
         }

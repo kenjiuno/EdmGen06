@@ -662,7 +662,7 @@ namespace EdmGen06 {
                                     )
                                 )
                             , new XElement("connectionStrings"
-                                , new XComment("for EF4.x and EF6.0.x ")
+                                , new XComment("for EF4.x and EF6.0.x (ModelFirst edmx mode)")
                                 , new XElement("add"
                                     , new XAttribute("name", String.Format("{0}Entities", modelName))
                                     , new XAttribute("connectionString", String.Format("metadata={0}.csdl|{0}.ssdl|{0}.msl;provider={1};provider connection string=\"{2}\""
@@ -671,6 +671,12 @@ namespace EdmGen06 {
                                         , connectionString // UUt.UrlEncode("\"" + connectionString + "\"")
                                         ))
                                     , new XAttribute("providerName", "System.Data.EntityClient")
+                                    )
+                                , new XComment("for EF6.0.x (CodeFirst mode)")
+                                , new XElement("add"
+                                    , new XAttribute("name", String.Format("{0}Entities", modelName))
+                                    , new XAttribute("connectionString",  connectionString)
+                                    , new XAttribute("providerName", providerName)
                                     )
                                 )
                             , new XElement("entityFramework"
@@ -853,7 +859,7 @@ namespace EdmGen06 {
                     p = alco.Count;
                     alco.Add(dbco);
                 }
-                return String.Format("{0}_{1}", TSimpleIdentifier(dbco.Name,"Association"), 1 + p);
+                return String.Format("{0}_{1}", TSimpleIdentifier(dbco.Name, "Association"), 1 + p);
             }
 
             public String SsdlAssociationRef(ForeignKeyConstraint dbco) {

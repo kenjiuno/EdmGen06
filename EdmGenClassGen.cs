@@ -39,7 +39,7 @@ namespace EdmGen06 {
         XNamespace SSDLv3 { get { return XNamespace.Get(NS.SSDLv3); } }
         XNamespace MSLv3 { get { return XNamespace.Get(NS.MSLv3); } }
 
-        public void CodeFirstGen(String fpEdmx, String fpcs, String generator) {
+        public void CodeFirstGen(String fpEdmx, String fpcs, String generator, String connectionString) {
             XDocument edmx = XDocument.Load(fpEdmx);
             XNamespace nsCSDL = CSDLv3;
             XElement Schema = edmx.Element(EDMXv3 + "Edmx")
@@ -133,8 +133,23 @@ namespace EdmGen06 {
                     ),
                     EntityType = EntityTypes,
                     Association = alAssoc,
+                    ProviderName = (SsdlSchema.Attribute("Provider") ?? new XAttribute("Provider", "")).Value,
+                    ConnectionString = CSUt.Escs(connectionString),
+                    RawConnectionString = (connectionString),
                 };
                 File.WriteAllText(fpcs, new UtFakeSSVE(template, Model).Generated);
+            }
+        }
+
+        class CSUt {
+            public static String Escs(String s) {
+                if (s != null) {
+                    s = s
+                        .Replace("\\", "\\\\")
+                        .Replace("\"", "\\\"")
+                        ;
+                }
+                return s;
             }
         }
 
