@@ -81,6 +81,88 @@ namespace EdmGen06.Properties {
         }
         
         /// <summary>
+        ///   using System;
+        ///using System.Data.Entity;
+        ///using System.Data.Entity.Infrastructure;
+        ///
+        ///namespace @Model.Namespace {
+        ///@Each.EntityContainer
+        ///  public class @Current.Name : DbContext {
+        ///    public @Current.Name(): base(&quot;name=@Current.Name&quot;) {
+        ///    
+        ///    }
+        ///    
+        ///    protected override void OnModelCreating(DbModelBuilder modelBuilder) {
+        ///      throw new UnintentionalCodeFirstException();
+        ///    }
+        ///
+        ///@Each.EntitySet
+        ///    public DbSet&lt;@Current.EntityType&gt; @Current.Name { get; set; }
+        ///@EndEach
+        ///  }
+        ///@EndEach
+        ///
+        ///@Eac [残りの文字列は切り詰められました]&quot;; に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string DbContext_EFv5 {
+            get {
+                return ResourceManager.GetString("DbContext_EFv5", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   using System;
+        ///using System.ComponentModel.DataAnnotations;
+        ///using System.ComponentModel.DataAnnotations.Schema;
+        ///using System.Data.Entity;
+        ///using System.Data.Entity.Infrastructure;
+        ///
+        ///namespace @Model.Namespace {
+        ///@Each.EntityContainer
+        ///  public class @Current.Name : DbContext {
+        ///    public @Current.Name()
+        ///        : base(DBUt.Connect(), true) {
+        ///
+        ///    }
+        ///
+        ///    static class DBUt {
+        ///        internal static String ConnectionString {
+        ///            get {
+        ///                return &quot;@Model.ConnectionString&quot;;
+        ///      [残りの文字列は切り詰められました]&quot;; に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string DbContext_EFv6 {
+            get {
+                return ResourceManager.GetString("DbContext_EFv6", resourceCulture);
+            }
+        }
+        
+        /// <summary>
+        ///   using System;
+        ///using System.ComponentModel;
+        ///using System.Data.Entity.Core.EntityClient;
+        ///using System.Data.Entity.Core.Objects;
+        ///using System.Data.Entity.Core.Objects.DataClasses;
+        ///using System.Linq;
+        ///using System.Runtime.Serialization;
+        ///using System.Xml.Serialization;
+        ///
+        ///[assembly: EdmSchemaAttribute()]
+        ///#region EDM Relationship Metadata
+        ///@Each.Association
+        ///[assembly: EdmRelationshipAttribute(
+        ///  &quot;@Model.Namespace&quot;, 
+        ///  &quot;@Current.Name&quot;, 
+        ///  &quot;@Current.Role1&quot;, 
+        ///  System.Data.Entity.Core.Metadata.Edm.Relati [残りの文字列は切り詰められました]&quot;; に類似しているローカライズされた文字列を検索します。
+        /// </summary>
+        internal static string ObjectContext {
+            get {
+                return ResourceManager.GetString("ObjectContext", resourceCulture);
+            }
+        }
+        
+        /// <summary>
         ///   EdmGen06
         /// /ModelGen   &lt;connectionString&gt; &lt;providerName&gt; &lt;modelName&gt; &lt;targetSchema&gt; &lt;ver&gt;
         /// /EFModelGen &lt;connectionString&gt; &lt;providerName&gt; &lt;DbProviderServices&gt; &lt;modelName&gt; &lt;targetSchema&gt; &lt;ver&gt;
@@ -96,21 +178,6 @@ namespace EdmGen06.Properties {
         internal static string Usage {
             get {
                 return ResourceManager.GetString("Usage", resourceCulture);
-            }
-        }
-        internal static string DbContext_EFv5 {
-            get {
-                return ResourceManager.GetString("DbContext_EFv5", resourceCulture);
-            }
-        }
-        internal static string DbContext_EFv6 {
-            get {
-                return ResourceManager.GetString("DbContext_EFv6", resourceCulture);
-            }
-        }
-        internal static string ObjectContext {
-            get {
-                return ResourceManager.GetString("ObjectContext", resourceCulture);
             }
         }
     }
