@@ -1,12 +1,4 @@
-﻿// Choose one:
-
-#define AppConfigConnectionString
-//#define EmbeddedConnectionString
-//#define NpgsqlConfiguration
-
-// This file has your ConnectionString! -> "@Model.ConnectionString"
-
-using System;
+﻿using System;
 using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using System.Data.Entity;
@@ -14,44 +6,25 @@ using System.Data.Entity.Infrastructure;
 
 namespace @Model.Namespace {
 @Each.EntityContainer
-#if NpgsqlConfiguration
-  [DbConfigurationType(typeof(NpgsqlConfiguration))]
-#endif
   public class @Current.Name : DbContext {
-#if AppConfigConnectionString
-    public @Current.Name(): base("name=@Current.Name") {
-    
-    }
-    
-    // <connectionStrings>
-    //   <add name="@Current.Name" connectionString="@Model.ConnectionString" providerName="@Model.ProviderName" />
-    // </connectionStrings>
-#endif
-
-#if EmbeddedConnectionString
     public @Current.Name()
         : base(DBUt.Connect(), true) {
 
     }
 
     static class DBUt {
+        internal static String ConnectionString {
+            get {
+                return "@Model.ConnectionString";
+            }
+        }
+    
         internal static System.Data.Common.DbConnection Connect() {
             var db = System.Data.Common.DbProviderFactories.GetFactory("@Model.ProviderName").CreateConnection();
-            db.ConnectionString = "@Model.ConnectionString";
+            db.ConnectionString = ConnectionString;
             return db;
         }
     }
-#endif
-
-#if NpgsqlConfiguration
-    public @Current.Name(String connectionString): base(connectionString) {
-
-    }
-    
-    // using (var ctx = new @Current.Name("@Model.ConnectionString")) {
-    //   Console.WriteLine(ctx.Table.ToArray());
-    // }
-#endif
 
     protected override void OnModelCreating(DbModelBuilder modelBuilder) {
       throw new UnintentionalCodeFirstException();
@@ -94,16 +67,4 @@ namespace @Model.Namespace {
 
 @EndEach
 @EndEach
-
-#if NpgsqlConfiguration
-  class NpgsqlConfiguration : System.Data.Entity.DbConfiguration
-  {
-      public NpgsqlConfiguration()
-      {
-          SetProviderServices("Npgsql", Npgsql.NpgsqlServices.Instance);
-          SetProviderFactory("Npgsql", Npgsql.NpgsqlFactory.Instance);
-          SetDefaultConnectionFactory(new Npgsql.NpgsqlConnectionFactory());
-      }
-  }
-#endif
 }
